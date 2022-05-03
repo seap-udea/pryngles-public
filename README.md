@@ -60,11 +60,22 @@ If you prefer Google Colab check
 
 In this tutorial you will learn how to configure, install, use and even modify `pryngles`.
 
+## Disclaimer
+
+<p align="center">
+<img src="https://github.com/seap-udea/pryngles-public/blob/master/gallery/disco-planet.jpeg?raw=true" alt="Logo" width="150"/>
+</p>
+
+This is the *disco* version of Pryngles.  We are improving the
+resolution and performance of the software for future releases.
+
 ## What's new
 
-- **0.2.0.x versions**:
+- **0.3.x versions**:
 
-  - First official version of the package.
+  - New version number scheme: 0.x.y (x-major, y-minor release),
+    0.x.y.z (z test version).
+  - Major corrections in diffuse formulae.
 
 - **0.2.1.x versions**:
 
@@ -77,9 +88,9 @@ In this tutorial you will learn how to configure, install, use and even modify `
   - Added function `prynglesMark`.
   - Now `__version__` variable is available.
 
-- **0.3.x versions**:
+- **0.2.0.x versions**:
 
-  - Major corrections in diffuse formulae.
+  - First official version of the package.
 
 ------------
 
