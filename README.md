@@ -2,6 +2,10 @@
 
 ## PlanetaRY spaNGLES
 
+<!--[![PyPi version](https://pypip.in/v/pryngles/badge.png)](https://crate.io/packages/pryngles/)-->
+<!--[![PyPi downloads](https://pypip.in/d/pryngles/badge.png)](https://crate.io/packages/pryngles/)-->
+[![arXiv](http://img.shields.io/badge/arXiv-2004.14121-orange.svg?style=flat)](http://arxiv.org/abs/2004.14121)
+
 <!--
 <p align="left">
 <img src="https://github.com/seap-udea/pryngles-public/blob/master/gallery/pryngles-logo-wb.png?raw=true" alt="Logo" width="200"/>
@@ -72,6 +76,10 @@ In this tutorial you will learn how to configure, install, use and even modify `
   - Function to draw logo: `drawPryngles`.
   - Added function `prynglesMark`.
   - Now `__version__` variable is available.
+
+- **0.3.x versions**:
+
+  - Major corrections in diffuse formulae.
 
 ------------
 
