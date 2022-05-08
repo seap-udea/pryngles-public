@@ -122,7 +122,7 @@ Rrs=[]
 ts=[]
 for lamb in lambs:
     RP.changeStellarPosition(lamb)
-    ts+=[RP.t*RP.CU.UT]
+    ts+=[RP.t*sys.ut/pr.Const.days]
     RP.updateOpticalFactors()
     RP.updateDiffuseReflection()
     Rps+=[RP.Rip.sum()]
@@ -147,7 +147,9 @@ ax.legend();
 
 And *voilà*! 
 
-
+<p align="center">
+<img src="https://github.com/seap-udea/pryngles-public/blob/master/gallery/example-light-curve.png?raw=true" alt="Light curve"/>
+</p>
 
 Let's have some `Pryngles`.
 
@@ -170,6 +172,11 @@ This is the *disco* version of Pryngles.  We are improving the
 resolution and performance of the software for future releases.
 
 ## What's new
+
+- **0.4.x versions**:
+
+  - A new model to create and populate planetary system has been
+    implemented.
 
 - **0.3.x versions**:
 
