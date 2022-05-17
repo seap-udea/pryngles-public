@@ -23,12 +23,16 @@
 `Pryngles` is a `Python` package intended to produce useful
 visualizations of the geometric configuration of a ringed exoplanet
 (an exoplanet with a ring or exoring for short) and more importantly
-to calculate the light-curve signatures produced by this kind of
-planets.  The model behind the package has been developed in an effort
-to predict the signatures that exorings may produce not only in the
-light-curve of transiting exoplanets (a problem that has been
-extensively studied) but also in the light of stars having
-non-transiting exoplanets.
+to calculate the light curve produced by this kind of planets.  The
+model behind the package has been developed in an effort to predict
+the signatures that exorings may produce not only in the light curve
+of transiting exoplanets (a problem that has been extensively studied)
+but also in the light of stars having non-transiting exoplanets (the
+bright side of the light curve).
+
+*If `PyPI` does not render properly the images if this README please
+check it in our [public github
+repo](https://github.com/seap-udea/pryngles-public).*
 
 This is an example of what can be done with `Pryngles`:
 
