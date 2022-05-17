@@ -33,14 +33,14 @@ non-transiting exoplanets.
 This is an example of what can be done with `Pryngles`:
 
 <p align="center">
-<img src="https://github.com/seap-udea/pryngles-public/blob/master/gallery/ecliptic-i_3.0e+01-lambobs_9.0e+01-betaobs_9.0e+01.gif?raw=true" alt="Animation" width="400"/>
+<img src="https://raw.githubusercontent.com/seap-udea/pryngles-public/master/gallery/ecliptic-i_3.0e%2B01-lambobs_9.0e%2B01-betaobs_9.0e%2B01.gif" alt="Animation" width="400"/>
 </p>
 
 For the science behind the model please refer to the following papers:
 
 > Zuluaga, J.I., Sucerquia, M. & Alvarado-Montes, J.A. (2022), **The
   bright side of the light curve: a general photometric model for
-  non-transiting exorings**, submitted to MNRAS (2022).
+  non-transiting exorings**, submitted (2022).
 
 > Sucerquia, M., Alvarado-Montes, J. A., Zuluaga, J. I., Montesinos,
   M., & Bayo, A. (2020), **Scattered light may reveal the existence of
@@ -48,7 +48,7 @@ For the science behind the model please refer to the following papers:
   Society: Letters, 496(1), L85-L90.
 
 <p align="center">
-<img src="https://github.com/seap-udea/pryngles-public/blob/master/gallery/light-curve.png?raw=true" alt="Logo""/>
+<img src="https://raw.githubusercontent.com/seap-udea/pryngles-public/master/gallery/light-curve.png" alt="Logo""/>
 </p>
 
 ## Download and install
@@ -57,7 +57,7 @@ For the science behind the model please refer to the following papers:
 To install it, just execute:
 
 ```
-   pip install pryngles
+   pip install -U pryngles
 ```
 
 If you prefer, you may download and install from the
@@ -65,36 +65,48 @@ If you prefer, you may download and install from the
 
 ## Quick start
 
-Any calculation in `Pryngles` start by creating a planetary system:
+Import the package and some useful utilities:
 
 ```python
 import pryngles as pr
+from pryngles import Consts
+```
+
+Any calculation in `Pryngles` starts by creating a planetary system:
+
+```python
 sys=pr.System()
 ```
 
 Then we add objects to the planetary system using:
 
 ```python
-S=sys.addStar()
-P=sys.addPlanet(center=S,a=0.5,e=0.2,N=1000)
-R=sys.addRing(center=P,fi=1.4,fe=2.4,i=30*pr.deg,N=1500)
-O=sys.addObserver()
+S=sys.add(kind="Star",
+          physics=dict(radius=Consts.rsun/sys.ul),
+          optics=dict(limb_coeffs=[0.65])
+         )
+P=sys.add(kind="Planet",primary=S,
+          orbit=dict(a=0.2,e=0.0),
+          physics=dict(radius=Consts.rsaturn/sys.ul)
+         )
+R=sys.add(kind="Ring",primary=P,
+          physics=dict(fi=1.5,fe=2.5,i=30*Consts.deg)
+         )
+O=sys.add(kind="Observer",
+          optics=dict(lamb=90*Consts.deg,beta=90*Consts.deg)
+         )
 ```
 
-By default the planet has the radius of Saturn and it orbits a
-solar-mass star.  In the example before the planet has a ring
-extending from 1.4 to 2.4 planetary radius which is inclined 30
-degrees with respect to the orbital plane. It has an orbit with
-semimajor axis of 0.5 and eccentricity 0.2.  To discretize the surface
-of the planet the program will use 1000 spangles or sequins (surface
-elements with a circular shape) and the ring using 1500
-spangles.
+In the example before the planet has a ring extending from 1.5 to 2.5
+planetary radius which is inclined 30 degrees with respect to the
+orbital plane. It has an orbit with semimajor axis of 0.2 and
+eccentricity 0.0.
 
 Once the system is set we can *ensamble* a simulation, ie. creating an
 object able to produce a light-curve.
 
 ```python
-RP=sys.ensambleSystem()
+RP=sys.ensamble_system()
 ```
 
 To see how the surface of the planet and the rings looks like run:
@@ -107,7 +119,7 @@ You may change the position of the star in the orbit and see how the
 appearance of the planet changes:
 
 ```python
-RP.changeStellarPosition(45*pr.deg)
+RP.changeStellarPosition(45*Consts.deg)
 RP.plotRingedPlanet()
 ```
 
@@ -115,14 +127,14 @@ Below is the sequence of commands to produce your first light curve:
 
 ```python
 import numpy as np
-RP.changeObserver([90*pr.deg,30*pr.deg])
-lambs=np.linspace(+0.0*pr.deg,+360*pr.deg,100)
+RP.changeObserver([90*Consts.deg,30*Consts.deg])
+lambs=np.linspace(+0.0*Consts.deg,+360*Consts.deg,100)
 Rps=[]
 Rrs=[]
 ts=[]
 for lamb in lambs:
     RP.changeStellarPosition(lamb)
-    ts+=[RP.t*sys.ut/pr.Const.days]
+    ts+=[RP.t*sys.ut/Consts.day]
     RP.updateOpticalFactors()
     RP.updateDiffuseReflection()
     Rps+=[RP.Rip.sum()]
@@ -136,9 +148,9 @@ Rrs=np.array(Rrs)
 import matplotlib.pyplot as plt
 fig=plt.figure()
 ax=fig.gca()
-ax.plot(ts,1e6*Rps,label="Planet")
-ax.plot(ts,1e6*Rrs,label="Ring")
-ax.plot(ts,1e6*(Rps+Rrs),label="Planet+Ring")
+ax.plot(ts,Consts.ppm*Rps,label="Planet")
+ax.plot(ts,Consts.ppm*Rrs,label="Ring")
+ax.plot(ts,Consts.ppm*(Rps+Rrs),label="Planet+Ring")
 
 ax.set_xlabel("Time [days]")
 ax.set_ylabel("Flux anomaly [ppm]")
@@ -148,30 +160,40 @@ ax.legend();
 And *voilà*! 
 
 <p align="center">
-<img src="https://github.com/seap-udea/pryngles-public/blob/master/gallery/example-light-curve.png?raw=true" alt="Light curve"/>
+<img src="https://raw.githubusercontent.com/seap-udea/pryngles-public/master/gallery/example-light-curve.png" alt="Light curve"/>
 </p>
 
 Let's have some `Pryngles`.
 
-## Tutorial
+## Tutorials
 
-A complete `Jupyter` tutorial is provided
-[here](https://github.com/seap-udea/pryngles-public/blob/master/pryngles-tutorial-exploration.ipynb).
-If you prefer Google Colab check
-[this](https://bit.ly/pryngles-tutorial-exploration).
+We have prepared several `Jupyter` tutorials to guide you in the usage
+of the package. The tutorials evolve as the package is being optimized.
 
-In this tutorial you will learn how to configure, install, use and even modify `pryngles`.
+- **Quickstart**.  In this tutorial you will learn the basics about the package. 
+  [Download](https://github.com/seap-udea/pryngles-public/blob/master/pryngles-tutorial-quickstart.ipynb), [Google Colab](https://bit.ly/pryngles-tutorial-quickstart).
 
 ## Disclaimer
 
 <p align="center">
-<img src="https://github.com/seap-udea/pryngles-public/blob/master/gallery/disco-planet.jpeg?raw=true" alt="Logo" width="150"/>
+<img src="https://raw.githubusercontent.com/seap-udea/pryngles-public/master/gallery/disco-planet.jpeg" alt="Logo" width="150"/>
 </p>
 
 This is the *disco* version of Pryngles.  We are improving the
 resolution and performance of the software for future releases.
 
 ## What's new
+
+- **0.5.x versions**:
+
+  - Preview method plotRingedPlanet modified to work under Google Colab.
+
+  - Physical and astronomical constants included.
+
+  - A new tutorial was included.
+
+  - A major update in the classes to create and populate planetary
+    system.
 
 - **0.4.x versions**:
 
