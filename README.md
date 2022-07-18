@@ -13,6 +13,7 @@
 [![pythonver](https://img.shields.io/pypi/pyversions/pryngles)](https://pypi.org/project/pryngles/)
 <!--[![codesize](https://img.shields.io/github/languages/repo-size/seap-udea/pryngles-public)](https://pypi.org/project/pryngles/)-->
 [![arXiv](http://img.shields.io/badge/arXiv-2004.14121-orange.svg?style=flat)](http://arxiv.org/abs/2004.14121)
+[![ascl](https://img.shields.io/badge/ascl-2205.016-blue.svg?colorB=262255)](https://ascl.net/2205.016)
 
 <!--
 <p align="left">
@@ -189,13 +190,10 @@ resolution and performance of the software for future releases.
 ## What's new
 
 - **0.5.x versions**:
-
+  
   - Preview method plotRingedPlanet modified to work under Google Colab.
-
   - Physical and astronomical constants included.
-
   - A new tutorial was included.
-
   - A major update in the classes to create and populate planetary
     system.
 
