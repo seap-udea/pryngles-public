@@ -185,7 +185,7 @@ We have prepared several `Jupyter` tutorials to guide you in the usage
 of the package. The tutorials evolve as the package is being optimized.
 
 - **Quickstart**.  In this tutorial you will learn the basics about the package. 
-  [Download](https://github.com/seap-udea/pryngles-public/blob/master/pryngles-tutorial-quickstart.ipynb), [Google Colab](https://bit.ly/pryngles-tutorial-quickstart).
+  [Download](https://github.com/seap-udea/pryngles-public/blob/master/pryngles-tutorial-quickstart.ipynb), [Google Colab](https://drive.google.com/file/d/12ZzuhVlKNaxJcKhGAPKScHvkWQYa_fAJ/view?usp=sharinghttps://bit.ly/pryngles-tutorials-quickstart).
 
 ## Disclaimer
 
@@ -200,7 +200,9 @@ performance, modularity and programming standards for future releases.
    
 - **0.6.x versions**:
 
-  - Updated information about paper and ACL code.  0.6.0, Official release.
+  - 0.6.0 is the official release version, after paper acceptance and
+    arXiv submission.
+  - Updated information about paper in the arXiv and ACL code.
 
 - **0.5.x versions**:
   
