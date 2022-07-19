@@ -79,6 +79,13 @@ import pryngles as pr
 from pryngles import Consts
 ```
 
+> **NOTE**: If you are working in `Google Colab` before producing any plot please load the 
+  matplotlib backend:
+
+  ```python
+  %matplotlib inline
+  ```
+
 Any calculation in `Pryngles` starts by creating a planetary system:
 
 ```python
@@ -186,10 +193,14 @@ of the package. The tutorials evolve as the package is being optimized.
 <img src="https://raw.githubusercontent.com/seap-udea/pryngles-public/master/gallery/disco-planet.jpeg" alt="Logo" width="150"/>
 </p>
 
-This is the *disco* version of Pryngles.  We are improving the
-resolution and performance of the software for future releases.
+This is the *disco* version of Pryngles.  We are improving resolution,
+performance, modularity and programming standards for future releases.
 
 ## What's new
+   
+- **0.6.x versions**:
+
+  - Updated information about paper and ACL code.  0.6.0, Official release.
 
 - **0.5.x versions**:
   
