@@ -202,6 +202,7 @@ performance, modularity and programming standards for future releases.
 
   - 0.6.0 is the official release version, after paper acceptance and
     arXiv submission.
+  - File `version.py` included.
   - Link to quickstart tutorial in Google Colab, updated.
   - Updated information about paper in the arXiv and ACL code.
 
@@ -243,6 +244,20 @@ performance, modularity and programming standards for future releases.
 - **0.2.0.x versions**:
 
   - First official version of the package.
+
+
+### Test versions
+
+These are the improvements coming in the next releases of the package.
+Improvements in the 0.6.1.x test versions will be released in the
+0.7.x official versions.
+
+- **0.6.1.x versions**:
+
+  - This is branch `refactor`.
+  - We have refactor the package to make it much more modular.
+  - The previous version (`Camel` version) have been preserved in the
+    `legacy` module.
 
 ------------
 
