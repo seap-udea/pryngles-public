@@ -32,9 +32,11 @@ of transiting exoplanets (a problem that has been extensively studied)
 but also in the light of stars having non-transiting exoplanets (the
 bright side of the light curve).
 
+<!--
 *If `PyPI` does not render properly the images if this README please
 check it in our [public github
 repo](https://github.com/seap-udea/pryngles-public).*
+-->
 
 This is an example of what can be done with `Pryngles`:
 
@@ -211,6 +213,17 @@ This is the *disco* version of Pryngles.  We are improving resolution,
 performance, modularity and programming standards for future releases.
 
 ## What's new
+
+- **0.7.x versions**:
+
+  - All changes from the 0.6.1.x tests were assumed.
+
+  - The code was refactored to make it more modular.
+
+  - In the new version of the code we have made public a complete
+    notebook illustrating the use of the package for producing
+    light-curves of scientific uses
+    (pryngles-examples-exploration.ipynb).
    
 - **0.6.x versions**:
 
