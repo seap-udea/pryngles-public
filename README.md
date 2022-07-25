@@ -199,7 +199,8 @@ find the package at work to do actual science:
 
 - **Full-science exploration**.  In this example we include the code
   we used to generate the plots of the release paper
-  [arXiv:2207.08636](https://arxiv.org/abs/2207.08636):
+  [arXiv:2207.08636](https://arxiv.org/abs/2207.08636) as a complete
+  example of how the package can be used in a research context:
   [Download](https://github.com/seap-udea/pryngles-public/blob/master/pryngles-examples-exploration.ipynb),
   [Google Colab](https://bit.ly/pryngles-examples-exploration).
 
