@@ -1,4 +1,4 @@
-# Pryngles
+# PrynglesAA
 
 ## PlanetaRY spaNGLES
 
@@ -185,7 +185,19 @@ We have prepared several `Jupyter` tutorials to guide you in the usage
 of the package. The tutorials evolve as the package is being optimized.
 
 - **Quickstart**.  In this tutorial you will learn the basics about the package. 
-  [Download](https://github.com/seap-udea/pryngles-public/blob/master/pryngles-tutorial-quickstart.ipynb), [Google Colab](https://drive.google.com/file/d/12ZzuhVlKNaxJcKhGAPKScHvkWQYa_fAJ/view?usp=sharinghttps://bit.ly/pryngles-tutorials-quickstart).
+  [Download](https://github.com/seap-udea/pryngles-public/blob/master/pryngles-tutorial-quickstart.ipynb), [Google Colab](https://bit.ly/pryngles-tutorials-quickstart).
+
+## Examples
+
+Working with `Pryngles` we have created several `Jupyter` notebooks to
+illustrate many of its capabilities.  In the examples below you will
+find the package at work to do actual science: 
+
+- **Full-science exploration**.  In this example we include the code
+  we used to generate the plots of the release paper [arXiv:2207.08636](https://arxiv.org/abs/2207.08636)
+  [Download](https://github.com/seap-udea/pryngles-public/blob/master/pryngles-examples-exploration.ipynb),
+  [Google
+  Colab](https://bit.ly/pryngles-examples-exploration).
 
 ## Disclaimer
 
