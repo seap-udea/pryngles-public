@@ -1,4 +1,4 @@
-# PrynglesAA
+# Pryngles
 
 ## PlanetaRY spaNGLES
 
