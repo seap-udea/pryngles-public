@@ -217,13 +217,15 @@ performance, modularity and programming standards for future releases.
 - **0.7.x versions**:
 
   - All changes from the 0.6.1.x tests were assumed.
-
   - The code was refactored to make it more modular.
-
   - In the new version of the code we have made public a complete
     notebook illustrating the use of the package for producing
     light-curves of scientific uses
     (pryngles-examples-exploration.ipynb).
+  - New class, `Spangler`, intented to sample with a Fibonacci
+    distribution of points the surface of spheres and disks.  In the
+    `Camel` version of `Pryngles` the `Spangler` class correspond to
+    the class `Sample`.
    
 - **0.6.x versions**:
 
@@ -285,6 +287,10 @@ Improvements in the 0.6.1.x test versions will be released in the
   - We have refactor the package to make it much more modular.
   - The previous version (`Camel` version) have been preserved in the
     `legacy` module.
+
+- **0.7.0.x versions**:
+
+  - New.
 
 ------------
 
