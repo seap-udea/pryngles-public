@@ -190,6 +190,16 @@ of the package. The tutorials evolve as the package is being optimized.
   [Google Colab](https://bit.ly/pryngles-tutorials-quickstart)]. In
   this tutorial you will learn the very basics about the package.
 
+- **Developers**
+  [[Download](https://github.com/seap-udea/pryngles-public/blob/master/pryngles-tutorial-developers.ipynb),
+  [Google Colab](https://bit.ly/pryngles-tutorials-developers)]. In
+  this tutorial you will find a detailed description and
+  exemplification of almost every part of the package.  It is
+  especially intended for developers, however it may also be very
+  useful for finding code snippets useful for science applications.
+  As expected, it is under construction as the package is being
+  developed.
+
 ## Examples
 
 Working with `Pryngles` we have created several `Jupyter` notebooks to
@@ -226,6 +236,7 @@ performance, modularity and programming standards for future releases.
     distribution of points the surface of spheres and disks.  In the
     `Camel` version of `Pryngles` the `Spangler` class correspond to
     the class `Sample`.
+  - A new tutorial for developers have been added.
    
 - **0.6.x versions**:
 
