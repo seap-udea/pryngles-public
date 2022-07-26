@@ -234,7 +234,7 @@ performance, modularity and programming standards for future releases.
     (pryngles-examples-exploration.ipynb).
   - New class, `Spangler`, intented to sample with a Fibonacci
     distribution of points the surface of spheres and disks.  In the
-    `Camel` version of `Pryngles` the `Spangler` class correspond to
+    `RingedPlanet` interface of `Pryngles` the `Spangler` class correspond to
     the class `Sample`.
   - A new tutorial for developers have been added.
    
@@ -296,7 +296,7 @@ Improvements in the 0.6.1.x test versions will be released in the
 
   - This is branch `refactor`.
   - We have refactor the package to make it much more modular.
-  - The previous version (`Camel` version) have been preserved in the
+  - The previous version (`RingedPlanet` interface) have been preserved in the
     `legacy` module.
 
 - **0.7.0.x versions**:
