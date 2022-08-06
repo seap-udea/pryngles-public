@@ -236,6 +236,8 @@ performance, modularity and programming standards for future releases.
     distribution of points the surface of spheres and disks.  In the
     `RingedPlanet` interface of `Pryngles` the `Spangler` class correspond to
     the class `Sample`.
+  - The spangler class have been implemented to a point of creating
+    multiple spanglers in a single one.
   - We add the capability to preview spangles with the Spangler methods.
   - New classes introduced: Spangle.
   - New methods introduced in body class: spangle_body.
