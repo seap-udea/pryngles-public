@@ -48,8 +48,9 @@ For the science behind the model please refer to the following papers:
 
 > Zuluaga, J.I., Sucerquia, M. & Alvarado-Montes, J.A. (2022), **The
   bright side of the light curve: a general photometric model for
-  non-transiting exorings**, accepted for publication in Astronomy and
-  Computing (2022), [arXiv:2207.08636](https://arxiv.org/abs/2207.08636).
+  non-transiting exorings**, [Astronomy and Computing 40 (2022)
+  100623](https://www.sciencedirect.com/science/article/pii/S2213133722000476),
+  [arXiv:2207.08636](https://arxiv.org/abs/2207.08636).
 
 > Sucerquia, M., Alvarado-Montes, J. A., Zuluaga, J. I., Montesinos,
   M., & Bayo, A. (2020), **Scattered light may reveal the existence of
