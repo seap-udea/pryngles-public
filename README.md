@@ -237,6 +237,8 @@ performance, modularity and programming standards for future releases.
     `RingedPlanet` interface of `Pryngles` the `Spangler` class correspond to
     the class `Sample`.
   - We add the capability to preview spangles with the Spangler methods.
+  - New classes introduced: Spangle.
+  - New methods introduced in body class: spangle_body.
   - A new tutorial for developers have been added.
    
 - **0.6.x versions**:
