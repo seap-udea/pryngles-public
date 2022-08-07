@@ -227,6 +227,10 @@ performance, modularity and programming standards for future releases.
 
 - **0.7.x versions**:
 
+  - Add Center displacement to Spangler.
+  - Improve performance of matrix-vector transformation.
+  - Join spanglers methods able to produce complex sets of objects.
+  - Separation of Sampler and Spangler class.
   - All changes from the 0.6.1.x tests were assumed.
   - The code was refactored to make it more modular.
   - In the new version of the code we have made public a complete
