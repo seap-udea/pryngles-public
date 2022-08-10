@@ -32,6 +32,7 @@ import warnings
 import bz2
 import pickle
 import _pickle as cPickle
+import dill
 warnings.filterwarnings('ignore')
 
 # ## Jupyter compatibilty
@@ -99,7 +100,7 @@ class PrynglesCommon(object):
                 cPickle.dump(self, f)
         else:
             pikd = open(filename,"wb")
-            pickle.dump(self, pikd)
+            dill.dump(self, pikd)
             pikd.close()
             
     def load_from(self,filename,compressed=False):
@@ -108,7 +109,7 @@ class PrynglesCommon(object):
             data = cPickle.load(pikd)
         else:
             pikd = open(filename,"rb")
-            data = pickle.load(pikd)
+            data = dill.load(pikd)
             pikd.close()
         self.__dict__=data.__dict__
         return data

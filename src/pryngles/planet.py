@@ -153,9 +153,7 @@ class Planet(Body):
         self.physics.wrot=2*np.pi/self.physics.prot
         
         #Rotation axis:
-        self.physics.n_equ,one=spy.unorm(
-            sci.cartesian([1,self.physics.roll,90*Consts.deg-self.physics.i])
-        )
+        self.physics.n_equ=sci.cartesian([1,self.physics.roll,90*Consts.deg-self.physics.i])
 
 
 def spangle_body(self,seed=0):
