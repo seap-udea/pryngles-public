@@ -24,6 +24,7 @@ from pryngles import *
 
 import matplotlib.pyplot as plt
 import numpy as np
+import itertools
 
 #Plotting in 3d
 import mpl_toolkits.mplot3d.art3d as art3d
@@ -45,7 +46,8 @@ SAMPLER_SPHERE_PRESETS=np.array(
     list(np.arange(4000,5000,500))+\
     [5000]
 )
-SAMPLER_PRESETS=["sphere"]
+SAMPLER_CIRCLE_PRESETS=np.arange(100,6000,100)
+SAMPLER_PRESETS=["sphere","circle","ring"]
 
 # ## Sampler class
 
@@ -65,6 +67,15 @@ Sampler_doc=f"""    Fibonacci sampling of disks and spheres.
         filename: string, default = None:
             Load object from a binary file.  The binary file should be previously prepared with
             the method .save_to of the class.
+
+    Atributes to load data from presets:
+
+        preset: string, default = None:
+            If set, we load a preset sample from disk of the type preset.
+            Possible values: "sphere", "circle", "ring"
+            
+        ri: float, default = 0:
+            Inner radius of the ring when preset = "ring"
                 
     Secondary attributes:
     
@@ -116,7 +127,7 @@ Sampler_doc=f"""    Fibonacci sampling of disks and spheres.
 """
 
 class Sampler(PrynglesCommon):
-    def __init__(self,N=1000,seed=0,filename=None,preset=None):
+    def __init__(self,N=1000,seed=0,filename=None,preset=None,ri=0):
         
         #If filename is provided load object from filename
         if filename:
@@ -128,12 +139,25 @@ class Sampler(PrynglesCommon):
             if preset not in SAMPLER_PRESETS:
                 raise ValueError(f"No presets for {preset} available.  This are the available presets: {SAMPLER_PRESETS}.")
             
+            #Modify N if it is a ring
+            qring=False
+            if preset is "ring":
+                N=N/(1-ri**2)
+                preset="circle"
+                qring=True
+            
+            #Calculate the closest Npreset
             exec(f"self.Npreset=SAMPLER_{preset.upper()}_PRESETS[abs({N}-SAMPLER_{preset.upper()}_PRESETS).argmin()]")
+            
             Npreset=self.Npreset
             filename=Misc.get_data(f"sampler_presets/sample_{preset}_N_{Npreset}.pkl")
             self.load_from(filename)
             self.Npreset=Npreset
             self.filename=filename
+            
+            #If the preset is a ring cut a hole
+            if qring:
+                self._cut_hole(ri) 
             return
         
         #Basic
@@ -294,12 +318,32 @@ def gen_circle(self,perturbation=1,boundary=2):
 Sampler.gen_circle=gen_circle
 
 
-def gen_ring(self,gaps=[[0,0.5]],perturbation=1,boundary=2):
+def _cut_hole(self,ri=0):
     """
-    Sample points in fibonacci spiral on the unit circle, but including gaps (as in rings)
+    Cut a hole in the data (this applies to circle sampling)
+    """
+    #Purge points
+    cond=~((self.pp[:,1]>0)&(self.pp[:,0]<=ri))
+    self.pp=self.pp[cond]
+    self.ss=self.ss[cond]
+    self.N=len(self.pp)
+    
+    #Correct area
+    self.A=self.A-np.pi*ri**2
+    
+    #Distances
+    self._calc_distances()
+    
+Sampler._cut_hole=_cut_hole
+
+
+def gen_ring(self,ri=0.5,perturbation=1,boundary=2):
+    """
+    Sample points in fibonacci spiral on the unit circle, but including an inner gap (as in ring)
 
     Parameters:
-        gaps: description of the position of gaps in the form [(R1,dR1),(R2,dR2),...], List of tuples.
+        fi: float, default = 0.5:
+            Inner radius of the ring.
 
     Optional parameters:
         perturbation: type of perturbation (0 normal perturbation, 1 random perturbation), int
@@ -307,66 +351,21 @@ def gen_ring(self,gaps=[[0,0.5]],perturbation=1,boundary=2):
 
     Example:
         s.Sample(1000)
-        s.gen_circle_gaps([(0,0.2),(0.5,0.2),[0.8,0.1]])
+        s.gen_fullring(0.3)
 
     Update:
         ss, pp
     """
     if self.N<100:
         raise ValueError(f"The number of points for a ring shouldn't be lower than 100.  You provided {self.N}")
+
+    #Compute effective number
+    self.N=int(self.N/(1-ri**2))
+    self.gen_circle(perturbation,boundary)
     
-    self._seed_sampler()
-    
-    #Unitary radius
-    self.R=1
-
-    #Total area of the Sample
-    self.A=np.pi*self.R**2
-    for gap in gaps:
-        aminus=np.pi*((gap[0]+gap[1])**2-gap[0]**2)
-        self.A-=aminus
-
-    shift = 1.0 if perturbation == 0 else self.N*np.random.random()
-    ga = np.pi * (3.0 - np.sqrt(5.0))
-
-    self.dim=2
-    Ntest = self.N
-    Nacc = 0
-
-    while Nacc < self.N:        
-
-        # Boundary points
-        np_boundary = round(boundary * np.sqrt(Ntest))
-
-        ss = []
-        pp = []
-        j = 0
-        for i in range(Ntest):
-            if i > Ntest - (np_boundary + 1):
-                r = 1.0
-            else:
-                r = np.sqrt((i + 0.5) / (Ntest - 0.5 * (np_boundary + 1)))
-
-            skip = False
-            for gap in gaps:
-                if gap[0]<=r<=(gap[0]+gap[1]):
-                    skip = True
-            if skip:continue
-
-            phi   = ga * (i + shift)
-            ss += [np.array([r * np.cos(phi), r * np.sin(phi),0])]
-            pp += [np.array([r,np.mod(phi,2*np.pi),0])]
-            j += 1
-        Nacc = j
-        Ntest += int((Ntest-Nacc)/len(gaps))
-
-    self.ss=np.array(ss)
-    self.pp=np.array(pp)
-    self.N=Nacc
-
-    #Distances
-    self._calc_distances()
-    
+    #Cut hole
+    self._cut_hole(ri)
+        
 Sampler.gen_ring=gen_ring
 
 

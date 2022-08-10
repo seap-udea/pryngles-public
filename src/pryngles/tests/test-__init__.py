@@ -31,12 +31,6 @@ class Test(unittest.TestCase):
         g.load_from("/tmp/save.pck")
         print(g.casa,np.array(g.data).shape)
         
-        p.save_to("/tmp/save.bz2",compressed=True)
-        print("File size:",os.path.getsize("/tmp/save.bz2")/1e6," Mb")
-        g=PrynglesCommon()
-        g.load_from("/tmp/save.bz2",compressed=True)
-        print(g.casa,np.array(g.data).shape)
-                
     def test_fun(self):
         
         #Get path

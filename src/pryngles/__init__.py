@@ -29,9 +29,6 @@
 
 import unittest
 import warnings
-import bz2
-import pickle
-import _pickle as cPickle
 import dill
 warnings.filterwarnings('ignore')
 
@@ -82,7 +79,7 @@ get_ipython().run_line_magic('autoreload', '2')
 
 class PrynglesCommon(object):
     
-    def save_to(self,filename,compressed=False):
+    def save_to(self,filename):
         """Save object to a binary file
         
         Parameters:
@@ -95,22 +92,14 @@ class PrynglesCommon(object):
         Notes:
             Based on https://betterprogramming.pub/load-fast-load-big-with-compressed-pickles-5f311584507e.
         """
-        if compressed:
-            with bz2.BZ2File(filename,"w") as f: 
-                cPickle.dump(self, f)
-        else:
-            pikd = open(filename,"wb")
-            dill.dump(self, pikd)
-            pikd.close()
+        pikd = open(filename,"wb")
+        dill.dump(self, pikd)
+        pikd.close()
             
     def load_from(self,filename,compressed=False):
-        if compressed:
-            pikd = bz2.BZ2File(filename,"rb")
-            data = cPickle.load(pikd)
-        else:
-            pikd = open(filename,"rb")
-            data = dill.load(pikd)
-            pikd.close()
+        pikd = open(filename,"rb")
+        data = dill.load(pikd)
+        pikd.close()
         self.__dict__=data.__dict__
         return data
     
