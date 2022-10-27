@@ -6,20 +6,24 @@
 #.##......##..##....##....##..##..##..##..##......##..........##.#
 #.##......##..##....##....##..##...####...######..######...####..#
 #................................................................#
-#                                                                #
+
 # PlanetaRY spanGLES                                             #
-# The bright-side of the light-curve of (ringed) exoplanets      #
 #                                                                #
 ##################################################################
-# Jorge I. Zuluaga, Mario Sucerquia, Jaime A. Alvarado (C) 2022  #
+# License http://github.com/seap-udea/pryngles-public            #
+##################################################################
+# Main contributors:                                             #
+#   Jorge I. Zuluaga, Mario Sucerquia, Jaime A. Alvarado         #
 ##################################################################
 import unittest
 from pryngles import *
 class Test(unittest.TestCase):
-    def test_fun(self):
-        p=Consts.ppm
-        self.assertEqual([p],[1e6],[True]*1)
-
-
+	def test_fun(self):
+	    p=Consts.ppm
+	    self.assertEqual([p],[1e6],[True]*1)
+	    print(Consts.get_all())
+	    print(Consts.get_physical())
+	
 if __name__=="__main__":
-        unittest.main(argv=['first-arg-is-ignored'],exit=False)
+    unittest.main(argv=['first-arg-is-ignored'],exit=False)
+    

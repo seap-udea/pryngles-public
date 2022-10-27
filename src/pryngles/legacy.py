@@ -6,22 +6,23 @@
 #.##......##..##....##....##..##..##..##..##......##..........##.#
 #.##......##..##....##....##..##...####...######..######...####..#
 #................................................................#
-#                                                                #
-# PlanetaRY spanGLES                                             #
-# The bright-side of the light-curve of (ringed) exoplanets      #
-#                                                                #
-##################################################################
-# Jorge I. Zuluaga, Mario Sucerquia, Jaime A. Alvarado (C) 2022  #
-##################################################################
-#!/usr/bin/env python
-# coding: utf-8
 
-# # Pryngles module: legacy
+# PlanetaRY spanGLES                                             #
+#                                                                #
+##################################################################
+# License http://github.com/seap-udea/pryngles-public            #
+##################################################################
+# Main contributors:                                             #
+#   Jorge I. Zuluaga, Mario Sucerquia, Jaime A. Alvarado         #
+##################################################################
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# External required packages
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 from pryngles import *
 
-# ## External modules
-
+import unittest
 import spiceypy as spy
 import numpy as np
 import scipy as sp
@@ -46,7 +47,9 @@ get_ipython().run_line_magic('matplotlib', 'nbagg')
 #mh=np #Slower but powerful with arrays
 mh=math #Faster but not suitable for arrays
 
-# ### Constants
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Stand alone code of the module
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 class Const(object):
     #Astronomical constans
@@ -71,8 +74,36 @@ class Const(object):
 RAD=Const.rad
 DEG=Const.deg
 
-# ### Util Class
+class CanonicalUnits(object):
+    def __init__(self,UL=0,UT=0,UM=0):
+        if (UL==0)+(UT==0)+(UM==0)!=1:
+            raise AssertionError("You should provide at least two units.")
+        if (UL==0):
+            self.UM=UM
+            self.UT=UT
+            self.UL=(Const.G*UM*UT)**(1./3)
+        elif (UT==0):
+            self.UM=UM
+            self.UL=UL
+            self.UT=(UL**3/(Const.G*UM))**0.5
+        elif (UM==0):
+            self.UL=UL
+            self.UT=UT
+            self.UM=(UL**3/(Const.G*UT))**0.5
 
+        #Derived units
+        self.UV=self.UL/self.UT #Velocity
+        self.UA=self.UL/self.UT**2 #Velocity
+        self.UP=self.UM*self.UV #Linear momentum
+        self.UAM=self.UL*self.UP #Angular momentum
+        self.UF=self.UM*self.UA #Force
+        self.UE=self.UF*self.UA #Energy
+        self.UN=1/self.UT #Angular frequency
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Class Util
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 class Util(object):
     def solveKeplerEquation(M,e):
         """
@@ -431,41 +462,17 @@ class Util(object):
 
         return ARp
 
-# ### Configuration
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Class Conf
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 class Conf(object):
     FIGDIR="./paper2-model/figures/"
 
-# ### Units
 
-class CanonicalUnits(object):
-    def __init__(self,UL=0,UT=0,UM=0):
-        if (UL==0)+(UT==0)+(UM==0)!=1:
-            raise AssertionError("You should provide at least two units.")
-        if (UL==0):
-            self.UM=UM
-            self.UT=UT
-            self.UL=(Const.G*UM*UT)**(1./3)
-        elif (UT==0):
-            self.UM=UM
-            self.UL=UL
-            self.UT=(UL**3/(Const.G*UM))**0.5
-        elif (UM==0):
-            self.UL=UL
-            self.UT=UT
-            self.UM=(UL**3/(Const.G*UT))**0.5
-
-        #Derived units
-        self.UV=self.UL/self.UT #Velocity
-        self.UA=self.UL/self.UT**2 #Velocity
-        self.UP=self.UM*self.UV #Linear momentum
-        self.UAM=self.UL*self.UP #Angular momentum
-        self.UF=self.UM*self.UA #Force
-        self.UE=self.UF*self.UA #Energy
-        self.UN=1/self.UT #Angular frequency
-
-# ### Sampling class
-
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Class Sample
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 class Sample(object):
     """
     Fibonacci sampling of disks, hemispheres and spheres.
@@ -854,9 +861,12 @@ class Sample(object):
             self.ax.plot_wireframe(x,y,z,**self.wargs)
             self._setEqualAspectRatio3D(self.ss[:,0],self.ss[:,1],self.ss[:,2])
 
-# ### Ringed Planet Class
 
-RingedPlanet_doc=    """
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Class RingedPlanet
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+class RingedPlanet(object):
+    """
     Class Ringed Planet.
     
     Conventions:
@@ -865,7 +875,7 @@ RingedPlanet_doc=    """
     Initialization attributes:
     
         CU = CanonicalUnits(UL=Const.au,UM=Const.Msun): Canonical units used by the calculations.
-        
+    
         Planet
             Rplanet = Rsat/au : Radius of the planet, float [au] (0<=Rp)
         Rings:
@@ -888,19 +898,19 @@ RingedPlanet_doc=    """
             Nb=100: Number of sampling points in the ring border, int [adim]
         Observer:
             eobs_ecl=[pi/2,pi/2]: Spherical coordinates of observer (lamb,beta) {ecl}, numpy array (2) [rad]
-
+    
         physics: dictionary with physical options:
-
+    
             AS=0.5: Spherical albedo of the planet
-
+    
             AL=0.5: Lambertian albedo of the ring
-
+    
             reflection_rings_law=lambda x,y:x 
                     Law of reflection (by default is Lambertian, see Russel, 1916)
                     Other is the Lommel-Seeliger law, lambda x,y:x*y/(x+y) (see Russel, 1916)
-
+    
             taug=1.0: Geometrical opacity of the rings, float 
-            
+    
             diffeff=1: Forward diffraction effectiveness of ring particles. When ring particles are small, 
                       they diffract a fraction of the incoming power in different directions that the incoming
                       one. Thus, diffeff "measure" the fraction of the total power diffracted forwardly.  
@@ -908,9 +918,9 @@ RingedPlanet_doc=    """
                       Forward diffraction effectively reduce the optical opacity by a factor diffeff*taug
                       See Barnes & Fortney (2004).
                       float (0<=difeff<=1).
-            
+    
             wavelength=550e-9: Wavelength of observations, float [m]
-
+    
             particles: dictionary of particle properties (default values as French & Nicholson, 2000)
                 q=3: exponent of power-law of ring size distribution, float
                 s0=100e-6: characteristic particle size, float [m] 
@@ -918,36 +928,36 @@ RingedPlanet_doc=    """
                 smax=1e2 : maximum size of the particules, float [m]
                 Qsc=1: single scattering Albedo for ring particles
                 Qext=2: extinction efficiency
-                
+    
             limb_cs=[0.6550]: Limb darkening coefficients for star, numpy array (order)
-
+    
     Other Public (derivative) attributes:
-        
+    
         Physics:
             taueff: Effective optical depth of the rings
             normlimb: Normalization constant of the limb darkening coefficients.
             gamma0: Single scattering constant for atmosphere.
             gammap0: Single scattering constante for ring surface.
-        
+    
         Radius:
             Rs: Radius of the star in units of stellar radius (Rs=1), float [Rs].
             Rp: Radius of the planet in units of stellar radius, float [Rs].
             Ri: Radius of the inner ring in units of stellar radius, float [Rs].
             Re: Radius of the outer ring in units of stellar radius, float [Rs].
-            
+    
         Areas:
             Ap: Projected planet area, pi Rp^2, float [Rs^2]
             Ar: Projected ring area, pi (Re^2-Ri^2), float [Rs^2]
             As: Projected star area, pi Rs^2 = pi , float [Rs^2]
-
+    
         Ring orientation:
             nr_equ: Normal vector to rings {equ}, numpy array (3)
             nr_ecl: Normal vector to rings {ecl}, numpy array (3)
-
+    
         Stellar orbit:
             n: Stellar mean motion [cu]
             T: Stellar period, float [cu]
-
+    
             t: Present time, float [cu]
             lamb: Present lambda, float [cu]
             f: Present true anomaly, float [rad]
@@ -955,51 +965,51 @@ RingedPlanet_doc=    """
             rstar: Present stellar distance, float [Rs]
             thetas: Angular size of the star from the planet, float [rad]
             thetap: Angular size of the planet from the star, float [rad]
-        
+    
         Reference systems:
             {equ}: Equatorial (plane of the rings, x-axis is ring node line)
             {ecl}: Ecliptical system (plane of the orbit, x-axis is ring node line)
             {obs}: Observer system (z-axis is towards the observer)
-        
+    
         Stellar sampling points:
             ess: Cylindrical coordinates of stellar sampling points (rho,phi), numpy array (Ns x 2) [Rs, rad]
-        
+    
         Planet sampling points:
             rps_equ: Coordinates of sampling points for the planet {equ}, numpy array (Np x 3) [Rs]
             eps_equ: Spherical coordinates of planet sampling points (alpha,delta), numpy array (Np x 2) [rad]
-
+    
             rps_ecl: Coordinates of sampling points for the planet {ecl}, numpy array (Np x 3) [Rs]
             eps_ecl: Spherical coordinates of planet sampling points (lamb,beta) , numpy array (Np x 2) [rad]
-
+    
             rps_obs: Coordinates of sampling points for the planet {obs}, numpy array (Np x 3) [Rs]
             nps_obs: Normal vector to sampling points of the planet {obs}, numpy array (Np x 3)
-
+    
             dpmed: Average distance between sampling points, float [Rs]
             afp: Area of the planet facets, (assuming circular afp = pi dpmed^2), float [Rs^2].
-
+    
         Ring sampling points:
             rrs_equ: Coordinates of sampling points for the ring {equ}, numpy array (Nr x 3) [Rs]
             ers_equ: Spherical coordinates of ring sampling points (alpha,delta), numpy array (Np x 2) [rad]
-
+    
             rrs_ecl: Coordinates of sampling points for the ring {ecl}, numpy array (Nr x 3) [Rs]
             ers_ecl: Spherical coordinates of ring sampling points (lamb,beta) , numpy array (Np x 2) [rad]
-
+    
             rrs_obs: Coordinates of sampling points for the ring {obs}, numpy array (Np x 3) [Rs]
-            
+    
             Note: the latex Nb points [-2*Nb:] correspond to inner and outer ring points 
                   (only for plotting purposes).
-                  
+    
             irn : indexes corresponding to ring points, numpy array int (Nr).
             ibi : indexes corresponding to inner border, numpy array int (Nb).
             ibe : indexes corresponding to inner border, numpy array int (Nb).
-            
+    
             drmed: Average distance between sampling points, float [Rs]
             afr: Area of the ring facets, (assuming circular afr = pi drmed^2), float [Rs^2].
-
+    
         Star:
             rstar_ecl: Coordinates of star {ecl}, numpy array (3) [Rs]
             estar_ecl: Spherical coordinates of star (lamb,beta) , numpy array (2) [rad]
-
+    
             rstar_equ: Coordinates of star {equ}, numpy array (3) [Rs]
             estar_equ: Spherical coordinates of star (alpha,delta), numpy array (2) [rad]
     
@@ -1007,9 +1017,9 @@ RingedPlanet_doc=    """
             nobs_equ: Coordinates of observer {equ}, numpy array (3) [adim]
             eobs_equ: Spherical coordinates of observer (alpha,delta), numpy array (2) [rad]
             nobs_ecl: Coordinates of observer {ecl}, numpy array (3) [adim]
-
+    
         Activity arrays for sampling points:
-        
+    
             Planet:
                 vpo: point is visible by the observer (removing rings).
                 vp: point is visible by the observer.
@@ -1017,7 +1027,7 @@ RingedPlanet_doc=    """
                 sp: point is in the shadow cast by rings.
                 tp: point is transiting over the star.
                 op: point is occulted by the star.
-            
+    
             Rings:
                 vro: point is visible by the observer (removing planet)
                 vr: point is visible by the observer.
@@ -1025,26 +1035,28 @@ RingedPlanet_doc=    """
                 sr: point is in the shadow cast by the planet.
                 tr: point is transiting over the star.
                 or: point is occulted by the star. 
-                
+    
         Optical factors:
-        
+    
             Planet:
                 etaps: absolute value of the cosine of the stellar light incident angle on the ith facet, float.
                 zetaps: cosine of the outgoing angle towards observer on the ith facet, float.
                 ALps: lambertian albedo of planet facets, float.
                 fluxips: incoming stellar on planet facets, float.
                 afps: projected (normalized) areas of planet facets, float [Rs^2]
-                    
+    
             Ring:
                 etars: absolute value of the cosine of the stellar light incident angle on the ith facet, float.
                 zetars: absolute value of the cosine of the outgoing angle towards observer on the ith facet, float.
                 ALrs: lambertian albedo of planet facets, float.
                 fluxirs: incoming stellar on planet facets, float.
                 afrs: projected (normalized) areas of ring facets, float [Rs^2]
-        
-    """;
+    
+    """
 
-class RingedPlanet(object):
+    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    # Bassic methods
+    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     ##############################################################
     # CLASS-WIDE VARIABLES
@@ -2399,91 +2411,12 @@ class RingedPlanet(object):
             msr,rijs,etaijs,zetaijs=self._getFacetsOnSky(self.rrs_equ[i],observing_body="ring")
             self.Sir[i]=((self.fluxips[msr]*zetaijs)*(self.normr*self.afr/(4*mh.pi*rijs**2))*etaijs*self.zetars[i]).sum()
             #self.Sir[i]=((self.fluxips[msr])*(self.normr*self.afr/(4*mh.pi*rijs**2))*etaijs).sum()
-RingedPlanet.__doc__=RingedPlanet_doc
 
-# #### Debugging
 
-# DEBUG PLOT RINGED PLANET
-"""
-P=RingedPlanet(Nr=1000,Np=1000,Nb=0,
-               i=30*DEG,a=0.1,e=0.0,
-               lambq=0*DEG,
-               physics=dict(AL=1,AS=1,taug=1))
 
-P.changeObserver([90*DEG,90*DEG])
-fig1,fig2,fig3=P.plotRingedPlanet(view='top',showfig=0,axis=False,showtitle=0,bgdark=1)
-fig1
-#""";
-
-# DEBUG DIFFUSE REFLECTED LIGHT
-"""
-P=RingedPlanet(Nr=1000,Np=1000,Nb=0,physics=dict(AL=1,AS=1))
-P.changeObserver([90*DEG,90*DEG])
-P.changeStellarPosition(160.0*DEG)
-P.updateOpticalFactors()
-fig1,fig2,fig3=P.plotRingedPlanet(view='top',showfig=0)
-
-#Planet
-P.updateDiffuseReflection()
-Fcp=P.Rip.sum()
-print(f"Planetary simulated flux: {Fcp}")
-Fep=(P.Ap/2*(1-P.sp.sum()/P.Np))/(4*np.pi*P.rstar**2)
-print(f"Planetary lambertian flux: {Fep}")
-
-#Ring 
-P.updateDiffuseReflection()
-Fcr=P.Rir.sum()
-print(f"Ring simulated flux: {Fcr}")
-Fer=(P.Ar*np.sin(P.estar_equ[1])*(1-P.sr.sum()/P.Nr))/(4*np.pi*P.rstar**2)
-print(f"Ring lambertian flux: {Fer}")
-#""";
-
-# DEBUG TRANSIT DEPTH
-"""
-#NORMAL CASE
-print(f"\nNormal case:\n")
-
-P=RingedPlanet(Nr=1000,Np=1000,Nb=0,i=90*DEG,physics=dict(AL=1,AS=1,taug=1,limb_cs=[]))
-P.changeObserver([90*DEG,0*DEG])
-P.changeStellarPosition(+270.0*DEG+0.0*DEG)
-P.updateOpticalFactors()
-
-print(f"Optical depth: geometric = {P.taug}, effective = {P.taueff}")
-beta=1-Util.attenuationFactor([np.cos(P.io)],P.taueff)[0]
-print(f"Attenuation factor: beta = {beta}")
-Io=Util.limbDarkening(0,cs=P.limb_cs,N=P.normlimb)
-print(f"Intensity of disk in center: {Io}")
-
-P.updateTransit()
-Tep=P.Tip.sum()
-print(f"Numerical planet transit depth: {Tep}")
-Tcp=P.Ap*Io
-print(f"Theoretical planet transit depth: {Tcp}")
-
-Ter=P.Tir.sum()
-print(f"Numerical ring transit depth: {Ter}")
-Tcr=P.Ar*Io*beta
-print(f"Theoretical ring transit depth: {Tcr}")
-
-print(f"\nTilted case:\n")
-P=RingedPlanet(Nr=1000,Np=1000,Nb=0,i=40*DEG,physics=dict(AL=1,AS=1,taug=1,limb_cs=[]))
-P.changeObserver([90*DEG,0*DEG])
-P.changeStellarPosition(+270.0*DEG+0.0*DEG)
-P.updateOpticalFactors()
-
-beta=1-Util.attenuationFactor([np.cos(P.io)],P.taug)[0]
-print(f"Attenuation factor: beta = {beta}")
-
-P.updateTransit()
-Ter=P.Tip.sum()+P.Tir.sum()
-print(f"Numerical ring transit depth: {Ter}")
-Arp=Util.calcRingedPlanetArea(P.Rp,P.fi,P.fe,P.io,beta)
-Tcr=Arp*Io
-print(f"Theoretical ring transit depth: {Tcr}")
-#""";
-
-# ### Class Extra
-
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Class Extra
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 class Extra(object):
     def drawPryngles(iobs=1,dark=False):
         ############################################################
@@ -2579,163 +2512,3 @@ class Extra(object):
         text=ax.text(1,1,f"Pryngles {version}",rotation=270,ha='left',va='top',
                 transform=ax.transAxes,color='pink',fontsize=8,zorder=100);
         return text
-
-# ## Ensamble new and legacy modules
-
-def ensamble_system(self):
-    #Ensamble system
-    #--CONSISTENCY--
-    if self.nstars==1 and self.nplanets==1 and self.nrings==1:
-        self._ringedplanet=dict(
-            #Behavior
-            behavior=dict(shadows=True),
-            
-            #Units
-            CU=CanonicalUnits(UL=self.ul,UM=self.um),
-            
-            #Basic
-            Rstar=self.stars[0].physics.radius,
-            Rplanet=self.planets[0].physics.radius,
-            
-            Rint=self.rings[0].physics.fi,
-            Rext=self.rings[0].physics.fe,
-            i=self.rings[0].physics.i,
-            
-            a=self.planets[0].orbit.a,e=self.planets[0].orbit.e,
-            
-            #Orbit 
-            Mstar=1,x=0,lambq=0,t0=0,kepler=False,
-            
-            #Observer
-            eobs_ecl=np.array([self.observers[0].optics.lamb,
-                               self.observers[0].optics.beta]),
-            
-            #Sampling
-            Np=self.planets[0].optics.nspangles,
-            Nr=self.rings[0].optics.nspangles,
-            
-            Nb=0,Ns=30,
-            
-            #Physical properties
-            physics=dict(
-                #Albedos
-                AS=1,AL=1,
-                #Ring geometrical opacity
-                taug=1.0, #Geometrical opacity
-                diffeff=1.0, #Diffraction efficiency
-                #Law of diffuse reflection on ring surface
-                reflection_rings_law=lambda x,y:x,
-                #Observations wavelength
-                wavelength=550e-9,
-                #Ring particle propeties (see French & Nicholson, 2000)
-                particles=dict(q=3,s0=100e-6,smin=1e-2,smax=1e2,Qsc=1,Qext=2),
-                #Stellar limb darkening
-                limb_cs=self.stars[0].optics.limb_coeffs,
-            )
-        )
-        self.RP=RingedPlanet(**self._ringedplanet)
-        return self.RP
-    else:
-        raise AssertionError(f"You must have at least one star ({self.nstars}), a planet ({self.nplanets}) and a ring ({self.nrings})")
-
-System.ensamble_system=ensamble_system
-
-def draw_pryngles(iobs=1,dark=False):
-    ############################################################
-    # Simulation
-    ############################################################
-    no=10000
-    P=RingedPlanet(Nr=500,Np=500,Nb=0,
-                   Rint=1.2,Rext=2.0, i=45*DEG,
-                   a=0.1,e=0.1,lambq=70*DEG,
-                   physics=dict(AL=1,AS=1,taug=1),
-                   behavior=dict(shadows=0))
-    P.changeObserver([90*DEG,iobs*DEG]) #LOGO
-    lamb_initial = 0.0*DEG
-    lamb_final   = 360*DEG
-    lambs        = np.linspace(lamb_initial,lamb_final,no)
-    Rps=[]
-    Rrs=[]
-    ts=[]
-    Ts =[]
-
-    for lamb in lambs:
-        P.changeStellarPosition(lamb)
-        ts+=[P.t*P.CU.UT]
-        P.updateOpticalFactors()
-        P.updateDiffuseReflection()
-        P.updateTransit()
-
-        Rps+=[P.Rip.sum()]
-        Rrs+=[P.Rir.sum()]
-        Tp=P.Tip.sum()
-
-        T=Tp+P.Tir.sum()
-        Ts+=[T]
-
-    Ts=np.array(Ts)
-    ts=np.array(ts)
-    Rps=np.array(Rps)
-    Rrs=np.array(Rrs)
-    ts=ts/Const.days
-
-    ############################################################
-    # Plot
-    ############################################################
-    ppm=1e6
-    alpha=1
-
-    fig = plt.figure(figsize=(8,8))
-    ax = fig.add_subplot(projection='3d')
-    title=f"$a={P.a:g}$ au, $i={P.i*RAD:g}^\circ$ ($i_0={P.io*RAD:.1f}^\circ$), $\lambda_\mathrm{{q}}={P.lambq*RAD:g}^\circ$, Obs ($\lambda$,$\\beta$) : ({P.eobs_ecl[0]*RAD:g}$^\circ$,{P.eobs_ecl[1]*RAD:g}$^\circ$)"
-    theta= np.linspace(0, 2*np.pi, no)
-    x    = np.cos(theta)
-    y    = np.sin(theta)
-    z1    = (ppm*(Rrs+Rps-1e-3*Ts))
-    z2    = (ppm*(Rps+Rps-1e-3*Ts))
-
-    if dark:
-        cmap=cmr.bubblegum
-        back='k'
-        fcolor='pink'
-    else:
-        cmap=cmr.bubblegum_r
-        back='w'
-        fcolor='blue'
-
-    p=ax.scatter(x,y,(z2), marker=".", c=z1+z2 ,s=7, cmap=cmap,alpha=alpha,edgecolors=None)
-    cb=plt.colorbar(p, orientation="horizontal", fraction=0.03, pad=-0.2)
-    cb.set_label(r"Pryngles", color=fcolor, fontsize=40,fontname="Special Elite")
-
-    cb.ax.tick_params(labelcolor=back)
-    cbytick_obj = plt.getp(cb.ax, 'yticklabels' ) #Set y tick label color
-    plt.setp(cbytick_obj, color=back)
-    cb.ax.tick_params(which = 'minor', length = 2, color = back )
-    cb.ax.tick_params(which = 'major', length = 5, color = back )
-    cb.update_ticks()
-
-    # THE (SPHERICAL) SUN 
-    ax.scatter(0,0,0, marker=".", s=1000, color="orange")
-    for i in np.linspace(0,1,20):
-        ax.scatter(0,0,0, marker=".", s=1000*5*i, color="gold", alpha=1-0.9*i )
-
-    # AXIS SETUP
-    fig.set_facecolor(back)
-    ax.set_axis_off()
-    ax.set_facecolor(back) 
-
-    ##CAMERA ORIENTATION 
-    ax.view_init(elev=-30, azim=25)
-    fig.tight_layout()
-
-Plot.draw_pryngles=draw_pryngles
-
-"""
-if IN_JUPY_TER:
-    def test_logo(self):
-        Plot.draw_pryngles()        
-    class Test(unittest.TestCase):pass
-    Test.test_logo=test_logo
-    unittest.main(argv=['first-arg-is-ignored'],exit=False)
-""";
-
