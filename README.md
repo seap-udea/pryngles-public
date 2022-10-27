@@ -99,12 +99,6 @@ R=sys.add(kind="Ring",parent=P,fi=1.5,fe=2.5,i=30*Consts.deg)
 RP=sys.ensamble_system(lamb=90*Consts.deg,beta=90*Consts.deg)
 ```
 
-Then we add objects to the planetary system using:
-
-```python
-
-```
-
 In the example before the planet has a ring extending from 1.5 to 2.5
 planetary radius which is inclined 30 degrees with respect to the
 orbital plane. It has an orbit with semimajor axis of 0.2 and
