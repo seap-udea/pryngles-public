@@ -57,9 +57,9 @@ For the science behind the model please refer to the following papers:
   ringed exoplanets**. Monthly Notices of the Royal Astronomical
   Society: Letters, 496(1), L85-L90.
 
-<p align="center">
-<img src="https://raw.githubusercontent.com/seap-udea/pryngles-public/master/gallery/illumination-animation.gif" alt="Animation" width="400"/>
-</p>
+<p align="center"> <img
+src="https://raw.githubusercontent.com/seap-udea/pryngles-public/master/gallery/illumination-animation.gif"
+alt="Animation" width="400"/> </p>
 
 ## Download and install
 
