@@ -205,7 +205,8 @@ performance, modularity and programming standards for future releases.
 ## What's new
 
 For a detailed list of the newest features introduced in the latest
-releases pleas check [What's new](WHATSNEW.md).
+releases pleas check [What's
+new](https://github.com/seap-udea/pryngles-public/blob/master/WHATSNEW.md).
 
 - **0.9.x versions**:
   - New scatterer module.
