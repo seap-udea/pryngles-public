@@ -140,6 +140,9 @@ class Body(Orbody):
         #Kind, parent and child attributes
         self.kind=kind
         self.__defaults=defaults
+        
+        #Prepare key attributes
+        self.sg=None
 
         #Name of the object
         if 'name' in props:
@@ -257,7 +260,11 @@ class Body(Orbody):
             preset=self.preset,
             **self.geometry_args,
         )
-    
+        
+        #Additional properties in the Spangler DataFrame
+        if self.kind=="Star":
+            self.sg.data.source=True
+        
         self.sg.set_observer()
         self.sg.set_luz()
 
@@ -332,7 +339,7 @@ class Star(Body):
 
         """
         verbose(VERB_VERIFY,"Updating properties of Star")
-
+        
         #Compute limbdarkening at r = 0 to initialize normalization constant
         sci.limb_darkening(0,self.limb_coeffs)
         

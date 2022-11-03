@@ -929,6 +929,9 @@ class Spangler(PrynglesCommon):
             #In this case n_int is a per-spangle variable
             self.data.loc[cond,"cos_int"]=[np.vdot(ns,n_int)                                        for ns,n_int in zip(self.data.ns_int[cond],self.data.n_int[cond])]
             
+        #Set areas
+        self.data.loc[cond,"asp_int"]=self.data.loc[cond,"asp"]
+        
         return cond,n_int,d_int
     
     def _calc_qhulls(self):
@@ -949,13 +952,16 @@ class Spangler(PrynglesCommon):
                 #Convex hull of whole objects
                 cond_hull=(cond_obj)&(~self.data[cond_obj].hidden)
                 verbose(VERB_SIMPLE,"Hull points (whole object):",sum(cond_hull))
-    
+                qhull=Science.get_convexhull(self.data[cond_hull][["x_int","y_int"]])
+                vhull=qhull.volume if qhull else 0
+                
                 self.qhulls[name]+=[dict(
                     name=name,
                     hulltype="cen",
                     center=center,
                     zord=zord,
-                    qhull=Science.get_convexhull(self.data[cond_hull][["x_int","y_int"]])
+                    qhull=qhull,
+                    vhull=vhull,
                 )]
     
             else:
@@ -971,26 +977,32 @@ class Spangler(PrynglesCommon):
                 #Convex hull of hidden points (the hole)
                 cond_hull=(cond_obj)&(self.data[cond_obj].hidden)
                 verbose(VERB_SIMPLE,"Hull points (hidden):",sum(cond_hull))
+                qhull=Science.get_convexhull(self.data[cond_hull][["x_int","y_int"]])
+                vhull=qhull.volume if qhull else 0
     
                 self.qhulls[name]+=[dict(
                     name=name,
                     hulltype="hidden",
                     center=center,
                     zord=zord,
-                    qhull=Science.get_convexhull(self.data[cond_hull][["x_int","y_int"]]),
+                    qhull=qhull,
+                    vhull=vhull,
                     plane=plane
                 )]
     
                 #Convex hull of no hidden points
                 cond_hull=(cond_obj)&(~self.data[cond_obj].hidden)
                 verbose(VERB_SIMPLE,"Hull points (visible ring):",sum(cond_hull))
+                qhull=Science.get_convexhull(self.data[cond_hull][["x_int","y_int"]])
+                vhull=qhull.volume if qhull else 0
     
                 self.qhulls[name]+=[dict(
                     name=name,
                     hulltype="plane",
                     center=center,
                     zord=zord,
-                    qhull=Science.get_convexhull(self.data[cond_hull][["x_int","y_int"]]),
+                    qhull=qhull,
+                    vhull=vhull,
                     plane=plane
                 )]
     
@@ -1039,7 +1051,11 @@ class Spangler(PrynglesCommon):
                 
         """
         verbose(VERB_SIMPLE,f"Setting observer")
+        
+        #Set observer
         cond,self.n_obs,self.d_obs=self.set_intersect(nvec,alpha,center)
+        
+        #Set properties
         self.alpha_obs=alpha
         self.rqf_obs=sci.spherical(self.n_obs)
         self.center_obs=center.copy() if center else center
@@ -1109,6 +1125,9 @@ class Spangler(PrynglesCommon):
         #Conditions
         self.data.loc[cond,SPANGLER_COL_LUZ]=deepcopy(self.data.loc[cond,SPANGLER_COL_INT].values)
         
+        #Set relative azimuth
+        self.data.loc[cond,"azim_obs_luz"]=self.data.loc[cond,"azim_obs"]-self.data.loc[cond,"azim_luz"]
+        
         #Update states
         self.data.loc[cond,"unset"]=False
         
@@ -1151,6 +1170,7 @@ class Spangler(PrynglesCommon):
                newfig=True,
                show_azim=False,
                highlight=None,
+               maxval=None
               ):
         """
         Plot spangle.
@@ -1191,16 +1211,53 @@ class Spangler(PrynglesCommon):
                 Example:
                     
                     #Highlight all the spangles belonging to star which are visible
-                    cond=(sys.data.sphash=="Star")&(sys.data.visible)
+                    cond=(sys.data.name=="Star")&(sys.data.visible)
                     sys.sg.plot2d(highlight=(cond,dict(c='c')))
+                    
+                If the dictionary is empty it uses the default dict(s=1,c='w')
+                
+            maxval: float, default = None:
+                Change range of plot.  If None it is calculated automatically.
         """
+        
+        #Global properties of the plot
         bgcolor='k'
-        fig_factor=fsize/3.0
+        fig_factor=fsize/5
     
-        #Plot only a given object
+        #Create figure and axes
+        if "fig2d" not in self.__dict__ or newfig:
+            fig=plt.figure(figsize=(fsize,fsize))
+            fig.patch.set_facecolor(bgcolor)
+            ax=fig.add_subplot(111,facecolor=bgcolor)
+    
+            #Keep figure and axe
+            self.fig2d=fig
+            self.ax2d=ax
+    
+        #Convert list 
+        include_string=[]
+        for body in include:
+            if isinstance(body,PrynglesCommon):
+                include_string+=[body.name]
+            else:
+                include_string+=[body]
+        include=include_string
+    
+        exclude_string=[]
+        for body in exclude:
+            if isinstance(body,PrynglesCommon):
+                exclude_string+=[body.name]
+            else:
+                exclude_string+=[body]
+        exclude=exclude_string
+        
+        if isinstance(center_at,PrynglesCommon):
+            center_at=center_at.name
+    
+        #Plot only a set of objects
         if len(include)>0:
             
-            #List of all spanglers
+            #List of spanglers names
             exclude=list(self.data.name.unique())
             
             for name in include:
@@ -1216,9 +1273,6 @@ class Spangler(PrynglesCommon):
         cond=(self.data.name==center_at)
         x_cen,y_cen,z_cen=self.data[cond][[f"x_{coords}",f"y_{coords}",f"z_{coords}"]].mean() if sum(cond)>0 else np.array([0,0,0])
     
-        #Maxval original
-        maxval_full=1.2*np.abs(self.data[[f"x_{coords}",f"y_{coords}"]].to_numpy()-[x_cen,y_cen]).max()
-    
         #Select plotting bodies
         cond_included=(~self.data.hidden)&(~self.data.name.isin(exclude))
         num_included=sum(cond_included)
@@ -1226,29 +1280,28 @@ class Spangler(PrynglesCommon):
             raise AssertionError(f"No body remain after removing {exclude}")
         data=self.data[cond_included]
         
-        #Select scale for plot
-        cond=(data.name==center_at)
-        cond=cond if sum(cond)>0 else [True]*num_included        
-        maxval=1.2*np.abs(np.array(data[cond][[f"x_{coords}",f"y_{coords}"]])-np.array([x_cen,y_cen])).max()
-        
-        size_factor=500*fig_factor #*maxval_full/maxval
-            
-        #Figure
-        if "fig2d" not in self.__dict__ or newfig:
-            fig=plt.figure(figsize=(fsize,fsize))
-            fig.patch.set_facecolor(bgcolor)
-            ax=fig.add_subplot(111,facecolor=bgcolor)
+        #Calculate range of plot
+        cond_maxval=(~data.hidden)&(~data.name.isin(exclude))
+        cond_maxval=cond_maxval if sum(cond_maxval)>0 else [True]*num_included        
+        if not maxval:
+            maxval=1.2*np.abs(np.array(data[cond_maxval][[f"x_{coords}",f"y_{coords}"]])-np.array([x_cen,y_cen])).max()
     
-            #Keep figure and axe
-            self.fig2d=fig
-            self.ax2d=ax
-    
-        #Plot according to state
+        #Function to determine the size of the spangles
+        size_factor=1/2.5
+        size_points=lambda dsp,cos_obs:size_factor*(dsp[cond])*abs(cos_obs)**0.5
         
-        #Default colors
+        ##########################################################
+        #Plotting properties according to state
+        ##########################################################
+        #Default colors and sizes
         colors=np.array(['#000000']*num_included)
         sizes=np.array([0.0]*num_included)
         marker='o'
+        #All
+        """
+        cond=[True]*len(data)
+        sizes[cond]=0
+        """
     
         #Illuminated
         cond=(data.visible)&(data.illuminated)
@@ -1260,25 +1313,25 @@ class Spangler(PrynglesCommon):
                                                                            abs(data[cond].cos_luz),
                                                                            abs(data[cond].cos_obs))
                      ] #Object color
-        sizes[cond]=size_factor*data.dsp[cond]*abs(data.cos_obs[cond])
+        sizes[cond]=size_points(data.dsp[cond],data.cos_obs[cond])
     
         #Not illuminated
         cond=(data.visible)&(~data.illuminated)
         verbose(VERB_SIMPLE,f"Visible and not illuminated: {cond.sum()}")
         colors[cond]=Plot.rgb(SPANGLES_DARKNESS_COLOR,to_hex=True)
-        sizes[cond]=size_factor*data.dsp[cond]*data.cos_obs[cond]
+        sizes[cond]=size_points(data.dsp[cond],data.cos_obs[cond])
         
         #In shadow
         cond=(data.visible)&(data.shadow)
         verbose(VERB_SIMPLE,f"Visible and not illuminated: {cond.sum()}")
         colors[cond]=Plot.rgb(SHADOW_COLOR_LUZ,to_hex=True)
-        sizes[cond]=size_factor*data.dsp[cond]*data.cos_obs[cond]
+        sizes[cond]=size_points(data.dsp[cond],data.cos_obs[cond])
     
         if coords!="obs":
             #Not visible
             cond=(~data.visible)&(data[f"z_{coords}"]>0)
             colors[cond]=Plot.rgb(SHADOW_COLOR_OBS,to_hex=True)
-            sizes[cond]=size_factor*data.dsp[cond]*abs(data.cos_obs[cond])
+            sizes[cond]=size_points(data.dsp[cond],data.cos_obs[cond])
     
         #Transmitting
         cond=(data.visible)&(data.transmit)&(data.illuminated)
@@ -1290,17 +1343,22 @@ class Spangler(PrynglesCommon):
                                                                            abs(data[cond].cos_luz),
                                                                            abs(data[cond].cos_obs))
                      ] #Object color
-        sizes[cond]=0.5*size_factor*data.dsp[cond]*abs(data.cos_obs[cond])
+        sizes[cond]=size_points(data.dsp[cond],data.cos_obs[cond])
         
-        #Unset
-        cond=(data.unset)
-        colors[cond]=Plot.rgb([0,0.5,0],to_hex=True)
-        sizes[cond]=size_factor*data.dsp[cond]
+        ##########################################################
+        #Dot sizes scaled according to figure size
+        ##########################################################
+        ppd=72./self.ax2d.figure.dpi
+        trans=self.ax2d.transData.transform
+        dot_size=lambda x:int(((trans((1,x/maxval))-trans((0,0)))*ppd)[1]**2)
         
-        #Plot spangles
-        sargs=dict(c=colors,sizes=sizes,marker=marker)
+        ##########################################################
+        #Plotting properties according to state
+        ##########################################################
+        st=[max(dot_size(s),0.1) if s>0 else 0 for s in sizes]
+        sargs=dict(c=colors,s=st,marker=marker,zorder=-100)
         self.ax2d.scatter(data[f"x_{coords}"]-x_cen,data[f"y_{coords}"]-y_cen,**sargs)
-            
+        
         #Ranges
         self.ax2d.set_xlim(-maxval,maxval)
         self.ax2d.set_ylim(-maxval,maxval)
@@ -1309,9 +1367,12 @@ class Spangler(PrynglesCommon):
         xmin,xmax=factor*np.array(list(self.ax2d.get_xlim()))
         ymin,ymax=factor*np.array(list(self.ax2d.get_ylim()))
         
+        ##########################################################
+        #Show azim
+        ##########################################################
         if show_azim:
             #Choose which directions to show
-            cond=(self.data["cos_"+coords]>=0)&(~self.data.hidden)&(cond_included)
+            cond=(self.data["cos_"+coords]>=0)&(~self.data.hidden)&(cond_included)&(self.data["spangle_type"]!=SPANGLE_STELLAR)
     
             #Options of arrows showing direction
             quiver_args=dict(scale=15,angles='xy',scale_units='width',
@@ -1343,7 +1404,10 @@ class Spangler(PrynglesCommon):
             for text in leg.get_texts():
                 text.set_color("w")
             axis=False
-            
+    
+        ##########################################################
+        #Highlight spangles
+        ##########################################################
         if highlight:
             if len(highlight)<2:
                 raise AssertionError("Highlight should include conditions and scatter options")
@@ -1355,7 +1419,9 @@ class Spangler(PrynglesCommon):
                               self.data[cond_highlight&cond_included]["y_"+coords]-y_cen,
                               **def_args_scatter)
             
-        #Axis
+        ##########################################################
+        #Show axis and other labels
+        ##########################################################
         if newfig and axis:
             self.ax2d.plot([xmin,xmax],[0,0],'w-',alpha=0.3)
             self.ax2d.plot([0,0],[ymin,ymax],'w-',alpha=0.3)
@@ -1370,7 +1436,9 @@ class Spangler(PrynglesCommon):
                       fontsize=8*fig_factor,color='w',
                       transform=self.ax2d.transAxes)
     
-        #Decoration
+        ##########################################################
+        #Decorate plot
+        ##########################################################
         if newfig:
             #Title
             label_obs=""
@@ -1400,33 +1468,66 @@ class Spangler(PrynglesCommon):
             self.ax2d.axis("off")
             Plot.pryngles_mark(self.ax2d)
         
-        #Adjust axis
+        ##########################################################
+        #Adjust sizes
+        ##########################################################
         self.ax2d.axis("equal")
         self.fig2d.tight_layout()
         
         return x_cen,y_cen
     
     
-    def update_intersection_state(self):
+    def update_intersection_state(self,excluded=[],included=[]):
         """Update state of intersections
+        
+        Otional Parameters:
+            exluded: list, default = []:
+                List of objects to exclude from the calculation.
+                
+            included: list, default = []:
+                Objects to include in the calculation.
+        
         """    
         #Update qhulls using the latest intersection state
         self._calc_qhulls()
-    
-        #Check if an intersection has been computed
+        
+        #Check if at least one qhull has been computed
         if len(self.qhulls) == 0:
             raise AssertionError("You must set an intersection vantage point.")
     
+        #List of objects in spangler
+        names=list(Misc.flatten([self.name]))
+        
+        if len(included):
+            excluded=[n for n in names if n not in included]
+        verbose(VERB_SIMPLE,f"Exclusion list: {excluded}")
+        
+        #Objects included when performing intersection calculation
+        cond_included=self.data.name.apply(lambda x:x not in excluded)
+        if cond_included.sum()==0:
+            raise AssertionError("You have excluded all objects when calculating intersetions.")
+        else:
+            verbose(VERB_SIMPLE,f"Points included in calculation: {cond_included.sum()}")
+        
         #Under the current circumstances all this spangles are intersecting 
-        cond=(~self.data.hidden)&((self.data.cos_int>0)|(self.data.spangle_type.isin(SPANGLES_SEMITRANSPARENT)))
+        cond=    (~self.data.hidden)&    (     (self.data.cos_int>0)|     (self.data.spangle_type.isin(SPANGLES_SEMITRANSPARENT))    )&    (cond_included)
+        
         self.data.loc[cond,"intersect"]=True
         self.data.hidden_by_int=""
         self.data.transit_over_int=""
             
-        for name in Misc.flatten([self.name]):
+        #Loop over objects producing intersection
+        for name in names:
+            
+            #If body is excluded
+            if name in excluded:
+                verbose(VERB_SIMPLE,f"Skipping {name} from intersection computation")
+                continue
             
             #Points in present body
             cond=(self.data.name==name)
+            geometry=self.data[cond].geometry.iloc[0]
+            scale=self.data[cond].scale.iloc[0]
             
             #If this body is not in the field-of-view, avoid computation
             z_cen_int=self.data[cond].z_cen_int.iloc[0]
@@ -1438,12 +1539,16 @@ class Spangler(PrynglesCommon):
             inhull_not_in_hole=[True]
             
             verbose(VERB_SIMPLE,f"Calculating intersections for '{name}'")
+            
+            #Hull area of the body
+            ahull=0
             for i,hull in enumerate(self.qhulls[name]):
                 
                 qhull=hull["qhull"]
                 if qhull is None:
                     verbose(VERB_SIMPLE,f"No hull for '{name}'")
                     continue
+                vhull=hull["vhull"]
                 
                 htype=hull["hulltype"]
                 xcen,ycen,zcen=hull["center"]
@@ -1452,7 +1557,7 @@ class Spangler(PrynglesCommon):
                 verbose(VERB_SIMPLE,f"Hull {i+1} for '{name}' of type '{htype}'")
     
                 #Evaluate conditions
-                inhull=sci.points_in_hull(self.data[["x_int","y_int"]],qhull)&(~cond)
+                inhull=sci.points_in_hull(self.data[["x_int","y_int"]],qhull)&(~cond)&(cond_included)
                 below=np.array([False]*self.nspangles)
                 above=np.array([False]*self.nspangles)
                 
@@ -1462,12 +1567,16 @@ class Spangler(PrynglesCommon):
                     inhull_not_in_hole=(~inhull)
                     verbose(VERB_SIMPLE,f"Points outside hidden hull for '{name}': {sum(inhull_not_in_hole)}")
                     hull["notinhole"]=sum(inhull_not_in_hole)
+    
                     continue
                     
                 else:
                     #Body
                     verbose(VERB_SIMPLE,f"Points not in hole for '{name}:{htype}': {sum(inhull_not_in_hole)}")
-    
+        
+                    #Area of the body
+                    ahull+=vhull
+                    
                     #Spangles to evaluate
                     cond_vis=(self.data.cos_int>0)|(self.data.spangle_type.isin(SPANGLES_SEMITRANSPARENT))
                     cond_int=(~self.data.hidden)&(self.data.name!=name)&(cond_vis)
@@ -1501,19 +1610,38 @@ class Spangler(PrynglesCommon):
                 
                 hull["inhull"]=sum(inhull)
                 hull["below"]=sum(below)
+                
+            #Correct areas
+            if geometry != SAMPLER_GEOMETRY_CIRCLE:
+                cond=(self.data.name==name)&(self.data.cos_int>=0)&(~self.data.hidden)
+                
+                #This what the sum actually is
+                ahull_expected=(self.data.loc[cond,"asp_int"]*abs(self.data.loc[cond,"cos_int"])).sum()
+                #This is the expected value
+                ahull=np.pi*scale**2
+                
+                #Normalization factor to get sum = ahull
+                norma=ahull/ahull_expected
+                
+                #Final area
+                self.data.loc[cond,"asp_int"]*=norma
         
     def update_visibility_state(self):
         """Update states and variables related to visibility
         """
         self.update_intersection_state()
+        self.data[SPANGLER_COL_OBS]=self.data[SPANGLER_COL_INT].values
+        
         self.data.hidden_by_obs=self.data.hidden_by_obs+self.data.hidden_by_int
         self.data.transit_over_obs=self.data.transit_over_obs+self.data.transit_over_int
         self.data.visible=self.data.visible&self.data.intersect
     
-    def update_illumination_state(self):
+    def update_illumination_state(self,excluded=[],included=[]):
         """Update states and variables related to illumination
         """
-        self.update_intersection_state()
+        self.update_intersection_state(excluded,included)
+        self.data[SPANGLER_COL_LUZ]=self.data[SPANGLER_COL_INT].values
+        
         self.data.hidden_by_luz=self.data.hidden_by_luz+self.data.hidden_by_int
         self.data.transit_over_luz=self.data.transit_over_luz+self.data.transit_over_int
         

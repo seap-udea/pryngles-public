@@ -144,7 +144,7 @@ class Orbit(PrynglesCommon):
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # Bassic methods
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
+    ORBIT_SIMULATIONS=[]    
     def __init__(self,
                  name=None,
                  units=None,
@@ -222,7 +222,6 @@ class Orbit(PrynglesCommon):
         #Relative vector
         self.r=np.array(sim.particles[1].xyz)
         self.v=np.array(sim.particles[1].vxyz)
-        
         del sim
         
         #Calculate positions of components
@@ -247,6 +246,8 @@ class Orbit(PrynglesCommon):
                          x=self.r2[0],y=self.r2[1],z=self.r2[2],
                          vx=self.v2[0],vy=self.v2[1],vz=self.v2[2])
 
+        Orbit.ORBIT_SIMULATIONS+=[self.sub_sim]
+
     def calculate_orbit(self,sim=None):
         """Ensamble Hierarchical N-body system.
         
@@ -269,9 +270,9 @@ class Orbit(PrynglesCommon):
             sim.add(m=self.m1,
                     x=self.r1[0],y=self.r1[1],z=self.r1[2],
                     vx=self.v1[0],vy=self.v1[1],vz=self.v1[2])
-            
+
         if isinstance(self.p2,Orbit):
-            self.p2.calculate_orbit(sim)
+            p=self.p2.calculate_orbit(sim)
         else:
             sim.add(m=self.m2,
                     x=self.r2[0],y=self.r2[1],z=self.r2[2],
@@ -279,6 +280,7 @@ class Orbit(PrynglesCommon):
             
         for p in sim.particles[1:]:
             self.Ps+=[p.P]
+
         return self
             
     def get_states(self):
@@ -374,5 +376,7 @@ class OrbitUtil(PrynglesCommon):
             m2=p2.m
             elements=p2.elements
 
+        Orbit.ORBIT_SIMULATIONS=[]
         orbit=Orbit(m1=m1,m2=m2,units=units,**elements)
+
         return orbit,pelements

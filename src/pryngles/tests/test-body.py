@@ -47,6 +47,8 @@ class Test(unittest.TestCase):
 	
 	def test_spangle(self):
 	
+	    global B
+	    
 	    Verbose.VERBOSITY=VERB_ALL
 	
 	    #Create body
@@ -89,6 +91,8 @@ class Test(unittest.TestCase):
 	
 	def test_planet(self):
 	
+	    global P
+	    
 	    Verbose.VERBOSITY=VERB_ALL
 	
 	    S=Star()

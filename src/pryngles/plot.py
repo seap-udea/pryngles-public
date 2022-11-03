@@ -33,6 +33,7 @@ import mpl_toolkits.mplot3d.art3d as art3d
 from matplotlib.patches import Circle, PathPatch
 from mpl_toolkits import mplot3d
 from scipy.spatial.transform import Rotation
+from matplotlib import animation
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -292,7 +293,7 @@ class Plot(object):
     
         return nvecs
     
-    def animate_rebound(sim,filename=None,tini=0,tend=None,nsnap=None,interval=100,axis=False,**plot_args):
+    def animate_rebound(sim,filename=None,tini=0,tend=None,nsnap=None,interval=100,axis=False,traces=False,**plot_args):
         """Animate a rebound simulation.
         """
         default_plot_args=dict(
@@ -306,7 +307,8 @@ class Plot(object):
         
         fig,ax=plt.subplots()
     
-        camera=Camera(fig)
+        if not traces:
+            camera=Camera(fig)
     
         #Get the period of the longest osculant orbit
         P=-1
@@ -316,6 +318,12 @@ class Plot(object):
         #Choose properly tend and nsnap
         tend=P if tend is None else tend
         nsnap=int(tend/(P/100)) if nsnap is None else nsnap
+        
+        if traces:
+            sim.move_to_com()
+            for p in sim.particles:
+                xyz=p.xyz
+                ax.plot(xyz[0],xyz[1],marker="*",color='k',ms=10,zorder=1000)
     
         #Simulate
         for i,t in enumerate(tqdm(np.linspace(tini,tend,nsnap))):
@@ -325,37 +333,39 @@ class Plot(object):
             for p in sim.particles:
                 xyz=p.xyz
                 ax.plot(xyz[0],xyz[1],**default_plot_args)
-                
-            ax.text(0.5,1,f"t = {sigfig.round(t,3)} (snap {i+1}/{nsnap})",
-                    transform=ax.transAxes,
-                    ha='center',va='bottom')
+             
+            if not traces:
+                ax.text(0.5,1,f"t = {sigfig.round(t,3)} (snap {i+1}/{nsnap})",
+                        transform=ax.transAxes,
+                        ha='center',va='bottom')
     
-            camera.snap()
+                camera.snap()
         
         if axis:
             ax.grid()
         else:
             ax.axis("off")
         ax.axis("equal")
-        
-        anim=camera.animate(interval=interval)    
-        Verbose.VERBOSITY=verbosity
-        
-        if filename is not None:
-            if 'gif' in filename:
-                anim.save(filename)
-                return anim
-            elif 'mp4' in filename:
-                ffmpeg=animation.writers["ffmpeg"]
-                metadata = dict(title='Pryngles Spangler Animation',
-                                artist='Matplotlib',
-                                comment='Movie')
-                w=ffmpeg(fps=15,metadata=metadata)
-                anim.save(filename,w)
-                return anim
+    
+        if not traces:
+            anim=camera.animate(interval=interval)    
+            Verbose.VERBOSITY=verbosity
+    
+            if filename is not None:
+                if 'gif' in filename:
+                    anim.save(filename)
+                    return anim
+                elif 'mp4' in filename:
+                    ffmpeg=animation.writers["ffmpeg"]
+                    metadata = dict(title='Pryngles Spangler Animation',
+                                    artist='Matplotlib',
+                                    comment='Movie')
+                    w=ffmpeg(fps=15,metadata=metadata)
+                    anim.save(filename,w)
+                    return anim
+                else:
+                    raise ValueError(f"Animation format '{filename}' not recognized")
             else:
-                raise ValueError(f"Animation format '{filename}' not recognized")
-        else:
+                return anim
+    
             return anim
-        
-        return anim

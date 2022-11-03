@@ -16,12 +16,6 @@
 [![arXiv](http://img.shields.io/badge/arXiv-2207.08636-orange.svg?style=flat)](http://arxiv.org/abs/2207.08636)
 [![ascl](https://img.shields.io/badge/ascl-2205.016-blue.svg?colorB=262255)](https://ascl.net/2205.016)
 
-<!--
-<p align="left">
-<img src="https://github.com/seap-udea/pryngles-public/blob/master/gallery/pryngles-logo-wb.png?raw=true" alt="Logo" width="200"/>
-</p>
--->
-
 `Pryngles` is a `Python` package intended to produce useful
 visualizations of the geometric configuration of a ringed exoplanet
 (an exoplanet with a ring or exoring for short) and more importantly
@@ -209,6 +203,30 @@ This is the *disco* version of Pryngles.  We are improving resolution,
 performance, modularity and programming standards for future releases.
 
 ## What's new
+
+For a detailed list of the newest features introduced in the latest
+releases pleas check [What's new](WHATSNEW.md).
+
+- **0.9.x versions**:
+  - New scatterer module.
+  - Scatterers introduced: LambertianGraySurface,
+    LambertianGrayAtmosphere, BlackBody, Neutral
+  - Sizes of the spangles in the plot2d routine are now calculated in
+    a smarter way taking into account the scale of the plot.
+  - Multiple light-sources are now included into the package: you can
+    simulate a binary system with its respective planets, rings and disks.
+  - Source code of the package is distributed in a clean form (using
+    xconvert to convert Developer Jupyter Notebooks to python code).
+  - Illumination from multiple sources of light (separated).
+  - Brand new modular structure of the package.
+  - Arbitrary number of bodies.
+  - Illuminations and visibility computed numerically.
+  - N-body problem orbital calculations (Rebound).
+  - Spangles info stored in Pandas DataFrames.
+  - Azimuths and further information on spangles.
+  - Many modules with a more friendly interface.
+  - Contribution and extension made easy.
+  - Realistic previsualization.
 
 - **0.7.x versions**:
 

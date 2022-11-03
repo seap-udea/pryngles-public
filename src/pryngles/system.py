@@ -94,7 +94,7 @@ class System(PrynglesCommon):
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # Bassic methods
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
+
     def __init__(self,
                  filename=None,
                  units=['au','msun','yr2pi'],
@@ -119,7 +119,7 @@ class System(PrynglesCommon):
         
         #Center of the light-source in the system
         self.source=None
-        self.center_source=np.array([0,0,0])
+        self.center_root=np.array([0,0,0])
         
         #Orbital configuration
         self.orbital_configuration=None
@@ -148,6 +148,17 @@ class System(PrynglesCommon):
         #Update rebound units
         self.update_units(units)
         
+        #By default spangle scatterers
+        self.spangle_scatterers={
+            SPANGLE_ATMOSPHERIC:(LambertianGrayAtmosphere,dict(AS="albedo_gray_spherical")),
+            SPANGLE_GRANULAR:(LambertianGraySurface,dict(AL="albedo_gray_normal")),
+            SPANGLE_LIQUID:(LambertianGraySurface,dict(AL="albedo_gray_normal")),
+            SPANGLE_SOLID_ICE:(LambertianGraySurface,dict(AL="albedo_gray_normal")),
+            SPANGLE_SOLID_ROCK:(LambertianGraySurface,dict(AL="albedo_gray_normal")),
+            SPANGLE_GASEOUS:(BlackBodySurface,dict()),
+            SPANGLE_STELLAR:(BlackBodySurface,dict()),
+        }
+
     def update_units(self,units):
         """Update units of the system
         """
@@ -313,6 +324,26 @@ class System(PrynglesCommon):
         if kind not in BODY_KINDS:
             raise ValueError(f"Object kind '{kind}' is not recognized.")
     
+        #Legacy
+        if 'primary' in props:
+            parent=props["primary"]
+        if kind=="Observer":
+            parent=self.root
+        
+        #Default parameters
+        if self.root:
+            if (kind!="Star") and (parent is None):
+                parent=self.root
+                
+            if kind=="Planet":
+                if "m" not in props:
+                    props["m"]=0.1*parent.m
+                if "radius" not in props:
+                    props["radius"]=0.5*parent.radius
+                if "a" not in props:
+                    if "a" in parent.__dict__:
+                        props["a"]=0.5*parent.a
+                    
         #Create body
         props.update(dict(name_by_kind=True))
         self.__body=eval(f"{kind}(parent=parent,**props)")
@@ -320,79 +351,54 @@ class System(PrynglesCommon):
         if self.__body.name in self.bodies:
             raise ValueError(f"An object with name '{self.__body.name}' has been already added.")
         
+        #If we have a root object and no parent has been provided
+        if not parent:
+            if self.root:
+                raise ValueError(f"A root object alread exist in the system ({self.root.name}) and you do not provided a parent body for {self.__body.name}.")
+            else:
+                self.root=self.__body
+                verbose(VERB_SIMPLE,f"Setting the root object as {self.root.name}")
+            
         self.bodies[self.__body.name]=self.__body
         
-        #Set the root body in the system.  The observer part of the conditional is for legacy purposes
-        if (self.__body.parent is None) and (self.__body.kind is not "Observer"):
-            if self.root:
-                raise AssertionError(f"A root body has been already set in {self.root}")
-            self.root=self.__body
-        
-        #Set the rebound hash according to type of object
-        if kind == "Ring":        
-            self.__body.rbhash=self.__body.parent.name
-        else:
-            self.__body.rbhash=self.__body.name
+        #Create the shined body tree
+        self.__body.shined=[]
     
         #Update system
         self._update_system()
         
-        #Get the common ancestor
-        root=commonancestors(self.__body)
-        if len(root)>0:
-            self.root=root[0]
-    
+        #Set the source of the object
+        if self.__body.source:
+            #Check that the source is a body
+            if not isinstance(self.__body.source,Body):
+                raise ValueError(f"The source of body must be an actual Body.")        
+            #Check that the source is among the bodies
+            if self.__body.source.name not in self.bodies:
+                raise ValueError(f"The source of body {self.__body.name} is not among system bodies {list(self.bodies.keys())}.")
+            #Check that the source be a star
+            if self.__body.source.kind!="Star":
+                raise ValueError(f"The source of body {self.__body.name} must be a Star.  You set {self.__body.source.name} which is a {self.__body.source.kind}.")
+            self.__body.source.shined+=[self.__body.name]
+        else:
+            if self.__body.kind=="Star":
+                self.__body.source=self.__body
+            elif self.__body.parent==self.root:
+                self.__body.source=self.root
+            else:
+                self.__body.source=self.__body.parent.source
+        self.__body.source.shined+=[self.__body.name]
+        
+        #Initialice scatterer
+        scatterer,init_props=self.spangle_scatterers[self.__body.spangle_type]
+        sprops=dict()
+        for prop in init_props:
+            column=init_props[prop]
+            sprops[prop]=self.__body.__dict__[column]
+        self.__body.scatterer=scatterer(**sprops)
+                
         verbose(VERB_SIMPLE,f"Object '{kind}' with name '{self.__body.name}' has been added.")
         return self.__body
     
-    
-    def remove(self,name):
-        """Remove a body from a system.
-    
-        Parameters:
-            name: string
-                Hash of the body to remove
-        
-        Notes: 
-            Remove eliminate body and all the childs and the childs of the childs.
-    
-        Example:
-            sys=System()
-            S=sys.add(m=2)
-            sys.remove(name=S.name)
-        """
-        
-        if name in self.bodies:
-            verbose(VERB_SIMPLE,f"Removing object {name} from system")
-    
-            obj=self.bodies[name]
-    
-            #Get the list of child hashes before removing (it changes during for)
-            child_hashes=list(obj.childs.keys())
-            
-            #Remove child objects
-            for child_hash in child_hashes:
-                if child_hash in self.bodies:
-                    self.remove(child_hash)
-                    
-            #Remove object from Rebound simulation
-            if obj.kind != "Ring":
-                if self._simulated:
-                    if self.nparticles:
-                        verbose(VERB_SIMPLE,f"Removing particle {name} from simulation")
-                        self.sim.remove(hash=name)
-            
-            #Remove object from childs of its parent
-            if obj.parent:
-                del obj.parent.childs[name]
-            
-            #Remove object from bodies
-            del self.bodies[name]
-    
-            #Update system
-            self._update_system()
-        else:
-            raise ValueError(f"No object with hash '{name}' in the system")
     
     def initialize_simulation(self,orbital_tree=None,**rebound_options):
         """Initialize rebound simulation using a given orbital tree.
@@ -447,7 +453,14 @@ class System(PrynglesCommon):
             self.orbital_tree=[self.root,self.orbital_tree]
         else:
             self.orbital_tree=orbital_tree
-               
+        
+        #Set the rebound hash of all bodies
+        for name,body in self.bodies.items():
+            if body.kind=="Ring":
+                body.rbhash=body.parent.name
+            else:
+                body.rbhash=body.name
+        
         #Check that all bodies in system is in the orbital tree
         bodies=list(Misc.flatten(self.orbital_tree))
         for name,body in self.bodies.items():
@@ -472,11 +485,60 @@ class System(PrynglesCommon):
                 m=bodies[i].m,
                 x=p.x,y=p.y,z=p.z,
                 vx=p.vx,vy=p.vy,vz=p.vz
-            )    
+            )
+        self.sim.orbit=orbit
         self._simulated=True
         self._update_system()
         
         return orbit
+    
+    def remove(self,name):
+        """Remove a body from a system.
+    
+        Parameters:
+            name: string
+                Hash of the body to remove
+        
+        Notes: 
+            Remove eliminate body and all the childs and the childs of the childs.
+    
+        Example:
+            sys=System()
+            S=sys.add(m=2)
+            sys.remove(name=S.name)
+        """
+        
+        if name in self.bodies:
+            verbose(VERB_SIMPLE,f"Removing object {name} from system")
+    
+            obj=self.bodies[name]
+    
+            #Get the list of child hashes before removing (it changes during for)
+            child_hashes=list(obj.childs.keys())
+            
+            #Remove child objects
+            for child_hash in child_hashes:
+                if child_hash in self.bodies:
+                    self.remove(child_hash)
+                    
+            #Remove object from Rebound simulation
+            if obj.kind != "Ring":
+                if self._simulated:
+                    if self.nparticles:
+                        verbose(VERB_SIMPLE,f"Removing particle {name} from simulation")
+                        self.sim.remove(hash=name)
+            
+            #Remove object from childs of its parent
+            if obj.parent:
+                del obj.parent.childs[name]
+            
+            #Remove object from bodies
+            del self.bodies[name]
+    
+            #Update system
+            self._update_system()
+        else:
+            raise ValueError(f"No object with hash '{name}' in the system")
     
     def spangle_system(self):
         """Generate the spangles of the objects in the system
@@ -508,13 +570,13 @@ class System(PrynglesCommon):
             #Center object around its position according to rebound
             body.center_ecl=np.array(self.sim.particles[body.rbhash].xyz)
             body.sg.set_positions(center_ecl=body.center_ecl)
-                
             self._spanglers[name]=body.sg
             
+        #Set the center of the source of light for each body
+        for name,body in self.bodies.items():
+            body.center_source=body.source.center_ecl
             if body==self.root:
-                body.sg.data.source=True
-                self.source=body
-                self.center_source=body.center_ecl
+                self.center_root=body.source.center_ecl
                 
         #Join spanglers
         self.sg=Spangler(spanglers=list(self._spanglers.values()))
@@ -543,6 +605,10 @@ class System(PrynglesCommon):
             
             #Set observer
             self.sg.set_observer(nvec=nvec,alpha=alpha,center=center)
+            
+            #Update areas of the spangles
+            
+            #Update system properties
             self.d_obs=self.sg.d_obs
             self.n_obs=self.sg.n_obs.copy()
             self.rqf_obs=self.sg.rqf_obs.copy()
@@ -558,18 +624,21 @@ class System(PrynglesCommon):
         else:
             raise AssertionError("You must first spangle system before setting observer direction.")
             
-    def _set_luz_recursive(self,name,nluz):
+    def _set_luz_recursive(self,name,nluz,verbosity=VERB_SIMPLE):
         """Set light source for body and 
         """
-        verbose(VERB_SIMPLE,f"Illuminating body {name}, with {nluz} and {self.center_source}")
         body=self.bodies[name]
-        self.sg.set_luz(nvec=nluz,center=self.center_source,name=name)
+        verbose(verbosity,f"Illuminating body {name}, with nluz = {nluz} and center = {body.center_source}")
+        self.sg.set_luz(nvec=nluz,center=body.center_source,name=name)
         if body.childs:
-            verbose(VERB_SIMPLE,f"Object {name} has childs!")
+            verbose(verbosity,f"\tObject {name} has childs!")
             for child_name in body.childs:
+                verbose(verbosity,f"\tCalling recursively set_luz for {child_name}")
                 self._set_luz_recursive(child_name,nluz)
+        else:
+            verbose(verbosity,f"\tObject {name} has no childs!")
                 
-    def _set_luz(self):
+    def _set_luz(self,verbosity=VERB_SIMPLE):
         """Set illumination in the system.
         
         Update:
@@ -584,30 +653,31 @@ class System(PrynglesCommon):
             for name,body in self.bodies.items():
               
                 if body.kind == "Star":
-                    verbose(VERB_SIMPLE,f"Body is a star... skipping")
+                    verbose(verbosity,f"Body {body.name} is a star... skipping")
                     continue
                     
                 if body.parent.name in self.bodies_illuminated:
-                    verbose(VERB_SIMPLE,f"Parent body of {name}, {body.parent.name}, has been already illuminated")
+                    verbose(verbosity,f"Parent body of {name}, {body.parent.name}, has been already illuminated")
                     continue
                             
                 #Get center of body
                 center=body.center_ecl
                         
                 #Get source and center
-                verbose(VERB_SIMPLE,f"Calculating illumination for '{name}' coming from '{self.source.name}' @ {self.center_source}")            
-                nluz=self.center_source-center
+                verbose(verbosity,f"Calculating illumination for '{name}' coming from '{body.source.name}' @ {body.center_source}")            
+                nluz=body.center_source-center
                         
                 if body.kind == "Ring" and body.parent.kind == "Star":
-                    verbose(VERB_SIMPLE,f"Parent body of ring, {body.parent.name} is a star. All spangles will be illuminated")
-                    self.sg.set_luz(nvec=nluz,center=self.center_source,name=name)
+                    verbose(verbosity,f"Parent body of ring, {body.parent.name} is a star. All spangles will be illuminated")
+                    self.sg.set_luz(nvec=nluz,center=body.center_source,name=name)
                     cond=(self.sg.data.name==name)
                     self.sg.data.loc[cond,"unset"]=False
-                    self.sg.data.loc[cond,"illuminated"]=True                    
+                    self.sg.data.loc[cond,"illuminated"]=True
+                    self.sg.data.loc[cond,"shadow"]=False
                 else:                
-                    verbose(VERB_SIMPLE,f"Illuminating body {name} and all its childs")
-                    self._set_luz_recursive(name,nluz)
-                    self.sg.update_illumination_state()
+                    verbose(verbosity,f"Illuminating body {name} and all its childs")
+                    self._set_luz_recursive(name,nluz,verbosity)
+                    self.sg.update_illumination_state(included=body.source.shined)
                     self.bodies_illuminated+=[name]
                     
             self._luz_set=True
@@ -703,7 +773,7 @@ class System(PrynglesCommon):
         else:
             raise AssertionError("You must first spangle system before setting positions.")
     
-    def ensamble_system(self,lamb=0,beta=0):
+    def ensamble_system(self,lamb=0,beta=0,**physics):
         """Ensamble Ringed Planet
         
         This class is for legacy purposes.
@@ -712,6 +782,10 @@ class System(PrynglesCommon):
         if "Observer" in self.bodies:
             lamb=self.bodies["Observer"].lamb
             beta=self.bodies["Observer"].beta
+            
+        physics_defaults=deepcopy(LEGACY_PHYSICAL_PROPERTIES)
+        physics_defaults.update(dict(limb_cs=self.bodies["Star"].limb_coeffs))
+        physics_defaults.update(physics)
     
         #--CONSISTENCY--
         self._ringedplanet=dict(
@@ -745,21 +819,7 @@ class System(PrynglesCommon):
             Nb=0,Ns=30,
     
             #Physical properties
-            physics=dict(
-                #Albedos
-                AS=1,AL=1,
-                #Ring geometrical opacity
-                taug=1.0, #Geometrical opacity
-                diffeff=1.0, #Diffraction efficiency
-                #Law of diffuse reflection on ring surface
-                reflection_rings_law=lambda x,y:x,
-                #Observations wavelength
-                wavelength=550e-9,
-                #Ring particle propeties (see French & Nicholson, 2000)
-                particles=dict(q=3,s0=100e-6,smin=1e-2,smax=1e2,Qsc=1,Qext=2),
-                #Stellar limb darkening
-                limb_cs=self.bodies["Star"].limb_coeffs,
-            )
+            physics=physics_defaults,
         )
         self.RP=RingedPlanet(**self._ringedplanet)
         return self.RP

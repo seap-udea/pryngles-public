@@ -373,12 +373,11 @@ class Test(unittest.TestCase):
 	
 	    """Shadow-test
 	    """
-	    nspangles=1000
+	    nspangles=500
 	    sps=[]
 	    sg=Spangler(nspangles=nspangles,name="Star",n_equ=[0,0,1],center_equ=[-7,0,0])
 	    sg.populate_spangler(shape="sphere",spangle_type=SPANGLE_STELLAR,scale=3,seed=1,preset=1)
 	    sps+=[sg]
-	    nspangles=1000
 	    sg=Spangler(nspangles=nspangles,name="Planet",n_equ=[0,0,1])
 	    sg.populate_spangler(shape="sphere",spangle_type=SPANGLE_SOLID_ROCK,scale=1,seed=1,preset=True)
 	    sps+=[sg]
@@ -392,19 +391,21 @@ class Test(unittest.TestCase):
 	    sg=Spangler(spanglers=sps)
 	
 	    #"""
-	    sg.set_observer(nvec=sci.direction(30,0))
+	    sg.set_observer(nvec=sci.direction(40,0))
 	    sg.update_visibility_state()
 	    #""";
 	
 	    #"""
 	    sg.set_luz(nvec=sci.direction(0,0))
-	    sg.update_illumination_state()
+	    #sg.update_illumination_state(excluded=[])
+	    sg.update_illumination_state(included=["Moon","Planet"])
+	    #sg.update_illumination_state(included=["Ring","Star"])
+	    #sg.update_illumination_state(excluded=["Star"])
 	    #""";
 	
 	    SHADOW_COLOR_LUZ=[90,0.2,1.0]
 	    sg.plot3d(center_at="Ring")
-	    sg.plot2d(center_at="Ring")
-	    #sg._interact_plot2d(center_at="Ring",lon_luz=0)
+	    sg.plot2d(center_at="Ring",maxval=5)
 	
 	    Verbose.VERBOSITY=VERB_NONE
 	
