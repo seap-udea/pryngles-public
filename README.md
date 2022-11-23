@@ -161,6 +161,95 @@ And *voilà*!
 
 Let's have some `Pryngles`.
 
+## Realistic scattering and polarization
+
+Starting in version 0.9.x Pryngles is able to compute fluxes using a
+more realistic model for scattering that includes polarization. The
+new features are not yet flexible enough but they can be used to
+create more realistic light curves.
+
+Here is a simple example of how to compute the light curve of a ringed planet
+whose atmosphere scatters reallistically the light of the star. 
+
+As shown before we need to create the system:
+
+```python
+nspangles=1000
+sys = pr.System()
+S=sys.add(kind="Star",radius=Consts.rsun/sys.ul,limb_coeffs=[0.65])
+P=sys.add(kind="Planet", primary=S,a=3,e=0.0,radius=Consts.rsaturn/sys.ul,nspangles=nspangles)
+R=sys.add(kind="Ring", primary=P,fi=1.5,fe=2.25,i=30*Consts.deg,roll=90*Consts.deg,nspangles=nspangles)
+RP=sys.ensamble_system()
+```
+
+Then generate the light curve:
+
+```python
+import numpy as np
+from tqdm import tqdm
+RP.changeObserver([-90*Consts.deg,60*Consts.deg])
+lambs=np.linspace(90*Consts.deg,450*Consts.deg,181)
+
+ts=[]
+Rps=[]
+Rrs=[]
+Pp = []
+Pr = []
+Ptot=[]
+for lamb in tqdm(lambs):
+    RP.changeStellarPosition(lamb)
+    ts+=[RP.t*RP.CU.UT]
+    RP.updateOpticalFactors()
+    RP.updateReflection()
+    Rps+=[RP.Rip.sum()]
+    Rrs+=[RP.Rir.sum()]
+    Pp += [RP.Ptotp]
+    Pr += [RP.Ptotr]
+    Ptot+=[RP.Ptot]
+    
+ts=np.array(ts)
+Rps=np.array(Rps)
+Rrs=np.array(Rrs)
+Pp=np.array(Pp)
+Pr=np.array(Pr)
+Ptot=np.array(Ptot)
+```
+
+And plot it:
+
+```python
+#Plot
+fig,axs=plt.subplots(2,1,figsize=(6,6),sharex=True)
+
+ax=axs[0]
+ax.plot(lambs*180/np.pi-90,Rps,label="Planet")
+ax.plot(lambs*180/np.pi-90,Rrs,label="Ring")
+ax.plot(lambs*180/np.pi-90,Rps+Rrs,label="Planet + Ring")
+ax.set_ylabel("Flux anomaly [ppm]")
+ax.legend()
+ax.grid()
+pr.Plot.pryngles_mark(ax)
+
+ax=axs[1]
+ax.plot(lambs*180/np.pi-90,Pp,label="Planet")
+ax.plot(lambs*180/np.pi-90,Pr,label="Ring")
+ax.plot(lambs*180/np.pi-90,Ptot,label="Planet + Ring")
+ax.set_ylabel("Degree of polarization [-]")
+ax.legend()
+ax.grid()
+pr.Plot.pryngles_mark(ax)
+
+ax=axs[1]
+ax.set_xlabel("True anomaly [deg]")
+fig.tight_layout()
+```
+
+The resulting polarization and light-curve will be:
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/seap-udea/pryngles-public/master/gallery/example-polarization-light-curve.png" alt="Polarization and Light curve"/>
+</p>
+
 ## Tutorials
 
 We have prepared several `Jupyter` tutorials to guide you in the usage

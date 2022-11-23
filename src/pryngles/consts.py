@@ -12,9 +12,6 @@
 ##################################################################
 # License http://github.com/seap-udea/pryngles-public            #
 ##################################################################
-# Main contributors:                                             #
-#   Jorge I. Zuluaga, Mario Sucerquia, Jaime A. Alvarado         #
-##################################################################
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # External required packages
@@ -86,12 +83,12 @@ RAD=Consts.rad
 DEG=Consts.deg
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# Constants of module $science
+# Constants of module science
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 SCIENCE_LIMB_NORMALIZATIONS=dict()
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# Constants of module $orbit
+# Constants of module orbit
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 REBOUND_ORBITAL_PROPERTIES=dict(
     #Mass
@@ -114,7 +111,7 @@ REBOUND_CARTESIAN_PROPERTIES=dict(
 )
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# Constants of module $sampler
+# Constants of module sampler
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 """ Sampler presets are the values of N 
     for which there are already stored samples
@@ -146,7 +143,7 @@ SAMPLE_SHAPES+=["ring"]
 SAMPLE_SHAPES+=["sphere"]
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# Constants of module $spangler
+# Constants of module spangler
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 """
     Colors: Given in hue (0-360), level (0: black-1: white), saturation (0-1)
@@ -264,6 +261,8 @@ SPANGLER_COLUMNS=odict({
     "z_cen_obs":0.0, #z-coordinate of the center of the body to which the spangle belows
     "hidden_by_obs":"", #Which body intersect the observer or light coming to a Spangle
     "transit_over_obs":"", #Which body is intersected by the Spangle (is transiting over)
+    "beta_loc":0, #Beta angle rotates the local scattering plane to the planetary scattering plane
+    
     
     #Coordinates of the spangle (cartesian and spherical) in the light-source system
     "center_luz":[0,0,0],#Center of the body
@@ -287,11 +286,16 @@ SPANGLER_COLUMNS=odict({
     "dsp":1.0, #Effective diameter of spangle, dsp = 2*(asp/pi)**0.5
 
     #Optical parameters
+    "scatterer":"",#Hash (identifier) of the scatterer used for this spangle
     "albedo_gray_normal":1.0,#Wavelength-independent normal albedo
     "albedo_gray_spherical":1.0,#Wavelength-independent spherical albedo
     "tau_gray_optical":0.0,#Wavelength-independent optical depth
     
+    #Polarization parameters
+    "F":0,"Q":0,"U":0,"V":0,"P":0, #Stokes vector components
+    
     #Thermal characteristics
+    "emmitter":"",#Hash (identifier) of the emmitter used for this spangle
     "Teq":273.15,#K, equilibrium temperature
     "Tem":273.15,#K, emmision temperature
     "emmisivity":1,#1 perfect black body
@@ -326,12 +330,13 @@ SPANGLER_KEY_ORDERING=[
     #Coordinates
     'x_ecl', 'y_ecl', 'z_ecl', 'ns_ecl',
     #Orientation
-    'azim_obs', 'n_obs', 'd_obs', 'asp_obs', 'cos_obs', 'hidden_by_obs', 'transit_over_obs', 
+    'azim_obs', 'n_obs', 'd_obs', 'asp_obs', 'cos_obs', 'hidden_by_obs', 'transit_over_obs', 'beta_loc',
     'azim_luz', 'n_luz', 'd_luz', 'asp_luz', 'cos_luz', 'hidden_by_luz', 'transit_over_luz',
     #Geometrical bulk properties
     'asp', 
     #Physical bulk properties
     'albedo_gray_normal', 'albedo_gray_spherical', 'tau_gray_optical', 
+    'F','Q','U','V','P',
     'Teq', 'Tem', 'emmisivity', 
     #State
     'visible', 'shadow', 'indirect', 'emit', 
@@ -372,6 +377,9 @@ SPANGLER_KEY_ORDERING=[
     'azim_obs_luz', 
     
     'dsp', 
+    
+    #Other
+    'scatterer', 'emmitter',
     
     #Internal states
     'unset', 'hidden', 'source', 'intersect', 'above', 
@@ -485,7 +493,10 @@ SPANGLER_COLUMNS=odict({
     "asp_int":1.0, #Effective area of the spangle with respect to intersection perspective 
     "z_cen_int":0.0, #z-coordinate of the center of the body to which the spangle belows
     "hidden_by_int":"", #Which body intersect the observer or light coming to a Spangle
+    "transit_over_int":"", #Which body is intersected by the Spangle (is transiting over)
 
+    "string_int":"",#Temporal string
+    
     #Coordinates of the spangle (cartesian and spherical) in the observer system
     "center_obs":[0,0,0], #Center of the body
     "x_obs":1,"y_obs":0,"z_obs":0, #Cartesian coordinates of the spangle
@@ -498,6 +509,7 @@ SPANGLER_COLUMNS=odict({
     "asp_obs":1.0, #Effective area of the spangle with respect to observer perspective 
     "z_cen_obs":0.0, #z-coordinate of the center of the body to which the spangle belows
     "hidden_by_obs":"", #Which body intersect the observer or light coming to a Spangle
+    "transit_over_obs":"", #Which body is intersected by the Spangle (is transiting over)
     
     #Coordinates of the spangle (cartesian and spherical) in the light-source system
     "center_luz":[0,0,0],#Center of the body
@@ -511,21 +523,23 @@ SPANGLER_COLUMNS=odict({
     "asp_luz":1, #Effective area of the spangle with respect to light-source perspective 
     "z_cen_luz":0.0, #z-coordinate of the center of the body to which the spangle belows
     "hidden_by_luz":"", #Which body intersect the observer or light coming to a Spangle
-    "rho_transit":0, #Distance from the spangle to the center of the source disk
+    "transit_over_luz":"", #Which body is intersected by the Spangle (is transiting over)
     
     #Azimutal angles
-    "azim_obs_luz":0,#Difference between the azimuth of the light-source and the observer over the spangle
+    "azim_obs_luz":0,#Difference between the azimuth of the observer over the spangle and that of light-source
 
     #Geometrical parameters
     "asp":1.0, #Effective area of the spangle in 3D 
     "dsp":1.0, #Effective diameter of spangle, dsp = 2*(asp/pi)**0.5
 
     #Optical parameters
+    "scatterer":"",#Hash (identifier) of the scatterer used for this spangle
     "albedo_gray_normal":1.0,#Wavelength-independent normal albedo
     "albedo_gray_spherical":1.0,#Wavelength-independent spherical albedo
     "tau_gray_optical":0.0,#Wavelength-independent optical depth
     
     #Thermal characteristics
+    "emmitter":"",#Hash (identifier) of the emmitter used for this spangle
     "Teq":273.15,#K, equilibrium temperature
     "Tem":273.15,#K, emmision temperature
     "emmisivity":1,#1 perfect black body
@@ -555,7 +569,7 @@ SPANGLER_COLUMNS.update(SPANGLER_SOURCE_STATES)
 """
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# Constants of module $body
+# Constants of module body
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 BODY_KINDS=[]
 
@@ -666,7 +680,7 @@ OBSERVER_DEFAULTS.update(odict(
 BODY_KINDS+=["Observer"]
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# Constants of module $system
+# Constants of module system
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 LEGACY_PHYSICAL_PROPERTIES=dict(
     #Albedos
@@ -683,3 +697,11 @@ LEGACY_PHYSICAL_PROPERTIES=dict(
     #Stellar limb darkening
     limb_cs=[],
 )
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Constants of module scatterer
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+try:
+    SCATTERERS_CATALOGUE
+except:
+    SCATTERERS_CATALOGUE=dict()

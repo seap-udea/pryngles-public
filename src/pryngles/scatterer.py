@@ -12,9 +12,6 @@
 ##################################################################
 # License http://github.com/seap-udea/pryngles-public            #
 ##################################################################
-# Main contributors:                                             #
-#   Jorge I. Zuluaga, Mario Sucerquia, Jaime A. Alvarado         #
-##################################################################
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # External required packages
@@ -36,61 +33,47 @@ class Scatterer(PrynglesCommon,ABC):
     
     Initialization attributes:
     
-        phase_law: function, default=lambda eta,zeta,delta,lambda:eta :
-    
-            Law of reflection (by default is Lambertian, see Russel, 1916)
-    
-            The phase_law must obey the following prototype:
-    
-                phase_law(eta,zeta,delta,lamb,**params):
-                    '''Phase law of the surface
-    
-                    Parameters:
-                        eta: float:
-                            cosine of the incoming angle.
-    
-                        zeta: float:
-                            cosine of the outgoing angle.
-    
-                        delta: float:
-                            difference between the incoming and outgoing azimuth.
-    
-                        lamb: float:
-                            Wavelength.
-    
-                        parameters: dictionary: 
-                            Other parameters of the phase law.
-    
-                    Return:
-                        Wavelength dependent albedo.
-                    '''
-                    ...
-    
-                Other law is the Lommel-Seeliger law:
-    
-                    phase_law = lambda eta,zeta,delta,params:eta*zeta/(eta+zeta) (see Russel, 1916)
-    
          params: dictionary:
              Other parameters of the phase law.
-             
+    
     Mandatory methods:
     
-        __init__(self,phase_law:lambda,**params)
+        __init__(self,phase_law:lambda,**params)->int:
+            This method should return a hash of the object.
+            
         get_albedo(eta:float,zeta:float,delta:float,lamb:float,**params)->float
+            This method must provide the albedo.
         
     Class methods:
-        show
-        
+    
+        register(scatterer,params):
+            Register scatterer for future uses.
+    
+        reset_catalogue():
+            Reset the catalogue of scatterers.
+            
+            Usage: Scatterer.reset_catalogue()
+    
     Usage:
         You can create a Scatterer which implements this class:
-        
+    
             class MySurface(Scatterer):
-                def __init__(self,phase_law,**params):
-                    self.A=params["A"]
-            
-                deg get_albedo(eta,zeta,delta,lamb,**params):
-                    albedo=self.A*eta
+                def __init__(self,**params):
+                    if self.register(self,params):
+                        #Read parameters of the scatterer
+                        self.A=params["A"]
+                        #Initialize scatterer
+                        self._initialize_scatterer()
+    
+                #Mandatory methods
+                def get_albedo(self,eta,zeta,delta,lamb,**params):
+                    albedo=self.AA*eta
                     return albedo
+    
+                # Private methods to prepare scatterer
+                def _initialize_scatterer(self):
+                    self.AA=self.A**2
+    
     
     """
 
@@ -99,9 +82,7 @@ class Scatterer(PrynglesCommon,ABC):
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     @abstractmethod
-    def __init__(self,
-                 phase_law=lambda eta,zeta,delta,lamb,params:eta,
-                 **params):
+    def __init__(self,**params)->str:
         pass
     
     @abstractmethod
@@ -109,8 +90,27 @@ class Scatterer(PrynglesCommon,ABC):
         pass
     
     @classmethod
-    def show(self):
-        print(self.__dict__)
+    def register(self,scatterer,params):
+        """Register scatterer
+        """
+        scatterer.params=params
+        scatterer.params["name"]=scatterer.__class__.__name__
+        scatterer.hash=Misc.calc_hash(params)
+        if scatterer.hash in SCATTERERS_CATALOGUE:
+            verbose(VERB_SIMPLE,f"Scatterer with name {scatterer.params['name']} and hash {scatterer.hash} already exist at {id(SCATTERERS_CATALOGUE)}")
+            scatterer.__dict__=deepcopy(SCATTERERS_CATALOGUE[scatterer.hash].__dict__)
+            return False
+        else:
+            verbose(VERB_SIMPLE,f"Creating a new scatterer with name {scatterer.params['name']} and hash {scatterer.hash}")
+            scatterer.params["hash"]=scatterer.hash
+            SCATTERERS_CATALOGUE[scatterer.hash]=scatterer
+            return True
+        
+    @classmethod
+    def reset_catalogue(self):
+        """Reset catalogue of scatterers
+        """
+        SCATTERERS_CATALOGUE=dict()
         
 
 
@@ -120,30 +120,28 @@ class Scatterer(PrynglesCommon,ABC):
 class NeutralSurface(Scatterer):
     """Neutral surface.
     """
-    
-    def __init__(self,
-                 phase_law=lambda eta,zeta,delta,lamb,params:eta,
-                 **params):
-        pass
+    def __init__(self,**params):
+        if self.register(self,params):
+            pass
     
     def get_albedo(self,eta,zeta,delta,lamb,**params):
         return 1
+    
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Class BlackBodySurface
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 class BlackBodySurface(Scatterer):
-    """Neutral surface.
+    """Black body surface
     """
-    
-    def __init__(self,
-                 phase_law=lambda eta,zeta,delta,lamb,params:eta,
-                 **params):
-        pass
+    def __init__(self,**params):
+        if self.register(self,params):
+            pass
     
     def get_albedo(self,eta,zeta,delta,lamb,**params):
         return 0
+    
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -153,23 +151,65 @@ class LambertianGraySurface(Scatterer):
     """Lambertian Gray Surface.
     
     This is the scatterer corresponding to a surface having a gray lambertian Albedo.
+    
+    Parameters:
+    
+        phase_law: function, default=lambda eta,zeta,delta,lambda:eta :
+
+            Law of reflection (by default is Lambertian, see Russel, 1916)
+
+            The phase_law must obey the following prototype:
+
+                phase_law(eta,zeta,delta,lamb,**params):
+                    '''Phase law of the surface
+
+                    Parameters:
+                        eta: float:
+                            cosine of the incoming angle.
+
+                        zeta: float:
+                            cosine of the outgoing angle.
+
+                        delta: float:
+                            difference between the incoming and outgoing azimuth.
+
+                        lamb: float:
+                            Wavelength.
+
+                        parameters: dictionary: 
+                            Other parameters of the phase law.
+
+                    Return:
+                        Wavelength dependent albedo.
+                    '''
+                    ...
+
+                Other law is the Lommel-Seeliger law:
+
+                    phase_law = lambda eta,zeta,delta,params:eta*zeta/(eta+zeta) (see Russel, 1916)
+
     """
     
-    def __init__(self,
-                 phase_law=lambda eta,zeta,delta,lamb,params:eta,
-                 **params):
+    def __init__(self,**params):
 
         
-        self.phase_law=phase_law
-        
-        #Gray albedo
-        self.AL=params["AL"]
-        
-        #Calculate the gammap parameter
-        self.gammap0=self._find_gammap()
-        
-        #Accelerate the calculation of the albedo
-        self._accelerate_lambertian_albedo()
+        if self.register(self,params):
+            verbose(VERB_SIMPLE,f"Initializing {self.params['name']} with hash {self.hash}")
+            
+            #Phase law
+            if "phase_law" in params:
+                self.phase_law=params["phase_law"]
+            else:
+                self.phase_law=lambda eta,zeta,delta,lamb,params:eta
+
+            #Gray albedo
+            self.AL=params["AL"]
+
+            #Calculate the gammap parameter
+            self.gammap0=self._find_gammap()
+
+            #Accelerate the calculation of the albedo
+            self._accelerate_lambertian_albedo()
 
     def get_albedo(self,eta,zeta,delta,lamb,**params):
         return self._get_albedo(eta)
@@ -204,24 +244,22 @@ class LambertianGrayAtmosphere(Scatterer):
     This is the scatterer corresponding to plane-parallel gray lambertian atmosphere
     """
     
-    def __init__(self,
-                 phase_law=lambda eta,zeta,delta,lamb,params:eta,
-                 **params):
+    def __init__(self,**params):
 
-        
-        self.phase_law=phase_law
-        
-        #Gray albedo
-        self.AS=params["AS"]
-        
-        #Load reflection functions
-        self._load_reflection_functions()
-        
-        #Calculate the gammap parameter
-        self.gamma0=self._find_gamma()
-        
-        #Accelerate the calculation of the albedo
-        self._accelerate_lambertian_albedo()
+        if self.register(self,params):        
+            verbose(VERB_SIMPLE,f"Initializing {self.params['name']} with hash {self.hash}")
+            
+            #Gray albedo
+            self.AS=params["AS"]
+
+            #Load reflection functions
+            self._load_reflection_functions()
+
+            #Calculate the gammap parameter
+            self.gamma0=self._find_gamma()
+
+            #Accelerate the calculation of the albedo
+            self._accelerate_lambertian_albedo()
 
     def get_albedo(self,eta,zeta,delta,lamb,**params):
         return self._get_albedo(eta)

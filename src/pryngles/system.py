@@ -12,9 +12,6 @@
 ##################################################################
 # License http://github.com/seap-udea/pryngles-public            #
 ##################################################################
-# Main contributors:                                             #
-#   Jorge I. Zuluaga, Mario Sucerquia, Jaime A. Alvarado         #
-##################################################################
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # External required packages
@@ -149,6 +146,32 @@ class System(PrynglesCommon):
         self.update_units(units)
         
         #By default spangle scatterers
+        """
+        This is the list of the class of scatterers used to calculate the scattering in
+        different types of spangles.
+        
+        The structure of this dictionary is:
+        
+            key: integer (or enumerator):
+                This is the column spangle_type in the spangler DataFrame.
+                
+            item: tuple (2):
+                Component 1: 
+                    Class of scatterer.
+                Component 2: 
+                    Dictionary mapping the initialization properties of the scatterer to columns
+                    in the spangler DataFrame.
+        
+        Example of item:
+        
+            SPANGLE_ATMOSPHERIC:(LambertianGrayAtmosphere,dict(AS="albedo_gray_spherical"))
+            
+                This means that for spangles of the type SPANGLE_ATMOSPHERIC Pryngles will 
+                instantiate an object of the class LambertianGrayAtmosphere.  This class have a
+                single parameter, the spherical albedo AS.  The dictionary means that when 
+                instantiating the object the column "albedo_gray_spherical" will be used to 
+                initialize the object.                
+        """
         self.spangle_scatterers={
             SPANGLE_ATMOSPHERIC:(LambertianGrayAtmosphere,dict(AS="albedo_gray_spherical")),
             SPANGLE_GRANULAR:(LambertianGraySurface,dict(AL="albedo_gray_normal")),
@@ -158,7 +181,7 @@ class System(PrynglesCommon):
             SPANGLE_GASEOUS:(BlackBodySurface,dict()),
             SPANGLE_STELLAR:(BlackBodySurface,dict()),
         }
-
+        
     def update_units(self,units):
         """Update units of the system
         """
@@ -277,6 +300,31 @@ class System(PrynglesCommon):
 
 
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    # Tested methods from module file scatterer
+    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    def update_scatterers(self):
+        """Update the scatterers of the spangles
+        """
+        if not self._spangled:
+            raise AssertionError("You need to spangle the system before updating the scatterers.")
+        
+        #Update scatterer only for the non-assigned one
+        cond=(self.data.scatterer=="")
+        for index in self.data[cond].index:
+            #Get spangle
+            spangle=self.data.loc[index]
+            #Get spangle sype
+            spangle_type=spangle["spangle_type"]
+            #Get scatterer class and options description
+            spangle_scatterer,spangle_options=self.spangle_scatterers[spangle_type]
+            #Build options of scatterers from options description
+            scatterer_options={**dict(zip(spangle_options.keys(),spangle[list(spangle_options.values())]))}
+            #Instantiate object of scatterer and save hash into DataFrame
+            self.data.loc[index,"scatterer"]=spangle_scatterer(**scatterer_options).hash
+    
+
+    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # Tested methods from module file system
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -388,14 +436,6 @@ class System(PrynglesCommon):
                 self.__body.source=self.__body.parent.source
         self.__body.source.shined+=[self.__body.name]
         
-        #Initialice scatterer
-        scatterer,init_props=self.spangle_scatterers[self.__body.spangle_type]
-        sprops=dict()
-        for prop in init_props:
-            column=init_props[prop]
-            sprops[prop]=self.__body.__dict__[column]
-        self.__body.scatterer=scatterer(**sprops)
-                
         verbose(VERB_SIMPLE,f"Object '{kind}' with name '{self.__body.name}' has been added.")
         return self.__body
     

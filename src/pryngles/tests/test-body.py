@@ -12,9 +12,6 @@
 ##################################################################
 # License http://github.com/seap-udea/pryngles-public            #
 ##################################################################
-# Main contributors:                                             #
-#   Jorge I. Zuluaga, Mario Sucerquia, Jaime A. Alvarado         #
-##################################################################
 import unittest
 from pryngles import *
 class Test(unittest.TestCase):

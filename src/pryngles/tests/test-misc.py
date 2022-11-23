@@ -12,9 +12,6 @@
 ##################################################################
 # License http://github.com/seap-udea/pryngles-public            #
 ##################################################################
-# Main contributors:                                             #
-#   Jorge I. Zuluaga, Mario Sucerquia, Jaime A. Alvarado         #
-##################################################################
 import unittest
 from pryngles import *
 class Test(unittest.TestCase):
@@ -36,6 +33,13 @@ class Test(unittest.TestCase):
 	
 	    #Get methods
 	    print(Misc.get_methods(Misc))
+	    
+	    #Hash
+	    d=dict(a=1,b=3,c=np)
+	    print(Misc.calc_hash(d))
+	    P=PrynglesCommon()
+	    print(Misc.calc_hash(P))
+	    print(Misc.calc_hash(PrynglesCommon))
 	
 if __name__=="__main__":
     unittest.main(argv=['first-arg-is-ignored'],exit=False)
