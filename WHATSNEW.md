@@ -8,6 +8,14 @@ list of the features introduced in each version family of the package.
 ## What's new
 
 - **0.9.x versions**:
+
+  - Major upgrade in the optical model of the legacy module.
+  - Method `updateReflection` introduced to calculate the flux
+    reflected on a realistic surface (atmospheric atmosphere or
+    ring/disk).
+  - Scattering is calculated from Fourier coefficients as calculated
+    by PyMieDap.
+  - Solved some problems with Pandas in the new versions.
   - New scatterer module.
   - Scatterers introduced: LambertianGraySurface,
     LambertianGrayAtmosphere, BlackBody, Neutral
