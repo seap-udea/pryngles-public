@@ -176,7 +176,7 @@ class Test(unittest.TestCase):
 	    cond,n_int,d_int=sg.set_intersect(nvec=[1,0,1],center=[0,0,-1],
 	                                      name="Ring")
 	    sg._calc_qhulls()
-	    sg._plot_qhulls()
+	    #sg._plot_qhulls() #Deprecated
 	
 	    #Plot 3d
 	    sg.plot3d(coords="int")
@@ -324,41 +324,6 @@ class Test(unittest.TestCase):
 	
 	    sgj.plot3d()
 	    sgj.plot2d()
-	
-	    Verbose.VERBOSITY=VERB_NONE
-	
-	def test_hulls(self):
-	
-	    Verbose.VERBOSITY=VERB_SIMPLE
-	
-	    sg1=Spangler(nspangles=1000,name="Ring",n_equ=[1,0,5])
-	    sg1.populate_spangler(shape="ring",spangle_type=SPANGLE_GRANULAR,scale=2.5,seed=1,ri=1.5/2.5,boundary=0)
-	    sg2=Spangler(nspangles=1000,name="Planet",n_equ=[0,0,1])
-	    sg2.populate_spangler(shape="sphere",spangle_type=SPANGLE_SOLID_ROCK,scale=1,seed=1,preset=True)
-	    sgj=Spangler(spanglers=[sg1,sg2])
-	
-	    #Hulls of obsever
-	    cond,n_int,d_int=sgj.set_intersect(nvec=[1,0,0.1],center=[1,1,1]) #Each time a set intersect is executed the convex hulls are renewed
-	    sgj._calc_qhulls()
-	
-	    fig,ax=plt.subplots()
-	    ax.scatter(sgj.data[cond].x_int,sgj.data[cond].y_int)
-	    f=convex_hull_plot_2d(sgj.qhulls["Planet"][0]["qhull"],ax)
-	    ax.axis("equal")
-	
-	    f=convex_hull_plot_2d(sgj.qhulls["Ring"][0]["qhull"],ax)
-	    f=convex_hull_plot_2d(sgj.qhulls["Ring"][1]["qhull"],ax)
-	
-	    #Hulls of light
-	    sgj.set_intersect([0,0,1]) #Each time a set intersect is executed the convex hulls are renewed
-	    sgj._calc_qhulls()
-	    fig,ax=plt.subplots()
-	    cond=sgj.data.visible
-	    ax.scatter(sgj.data[cond].x_int,sgj.data[cond].y_int)
-	    f=convex_hull_plot_2d(sgj.qhulls["Planet"][0]["qhull"],ax)
-	    f=convex_hull_plot_2d(sgj.qhulls["Ring"][0]["qhull"],ax)
-	    f=convex_hull_plot_2d(sgj.qhulls["Ring"][1]["qhull"],ax)
-	    ax.axis("equal")
 	
 	    Verbose.VERBOSITY=VERB_NONE
 	

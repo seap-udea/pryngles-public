@@ -1001,35 +1001,7 @@ class Spangler(PrynglesCommon):
                     vhull=vhull,
                     plane=plane
                 )]
-    
-    def _plot_qhulls(self):
-        """Plot the convex hulls 
-        """
-        
-        if not self.qhulls:
-            raise AssertionError("You cannot plot convex hulls because none has been yet calculated.")
-        
-        fig,ax=plt.subplots()
-    
-        for name,sphull in self.qhulls.items():
-            for qhull in sphull:
-                chull=qhull["qhull"]
-                if chull:
-                    f=convex_hull_plot_2d(chull,ax)
-                
-        #Remove points corresponding to qhull
-        for l in fig.axes[0].get_children():
-            if type(l) is Line2D:
-                plt.setp(l,ms=0,zorder=100)
-    
-        ax.scatter(self.data.x_int,self.data.y_int,color='r',s=65,fc="None",alpha=0.5,zorder=100)        
-        
-        ax.set_xlabel(r"$x_{int}$")
-        ax.set_ylabel(r"$y_{int}$")
-        ax.grid()
-        
-        ax.axis("equal")
-                
+               
     
     def set_observer(self,nvec=[0,0,1],alpha=0,center=None):
         """Set the positions and orientation of spanglers in the observer system.
