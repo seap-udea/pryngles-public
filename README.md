@@ -300,4 +300,5 @@ new](https://github.com/seap-udea/pryngles-public/blob/master/WHATSNEW.md).
 ------------
 
 This package has been designed and written originally by Jorge
-I. Zuluaga, Mario Sucerquia & Jaime A. Alvarado-Montes (C) 2022
+I. Zuluaga, Mario Sucerquia & Jaime A. Alvarado-Montes with the
+contribution of Allard Veenstra (C) 2022
