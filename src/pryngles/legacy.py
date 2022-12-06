@@ -6,7 +6,7 @@
 #.##......##..##....##....##..##..##..##..##......##..........##.#
 #.##......##..##....##....##..##...####...######..######...####..#
 #................................................................#
-
+#                                                                #
 # PlanetaRY spanGLES                                             #
 #                                                                #
 ##################################################################
@@ -19,6 +19,7 @@
 
 from pryngles import *
 
+import pickle
 import unittest
 import spiceypy as spy
 import numpy as np
@@ -43,7 +44,6 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.ticker import LogLocator
-import pryngles.pixx as pixx
 get_ipython().run_line_magic('matplotlib', 'nbagg')
 
 # Choose 
@@ -76,6 +76,7 @@ class Const(object):
 #Useful macros
 RAD=Const.rad
 DEG=Const.deg
+
 
 class CanonicalUnits(object):
     def __init__(self,UL=0,UT=0,UM=0):
@@ -1100,6 +1101,8 @@ class RingedPlanet(object):
         particles=dict(q=3,s0=100e-6,smin=1e-2,smax=1e2,Qsc=1,Qext=2),
         #Stellar limb darkening
         limb_cs=[0.6550],
+        #Scatterer extension
+        extension="cpixx",
     )
     _behavior=dict(
         #Include shadows in computations and plots?
@@ -1132,6 +1135,9 @@ class RingedPlanet(object):
         """
         The initialization routine only sets the basic geometric properties of the ring
         """
+        #Save values for debugging purposes
+        self.save_values=[]
+        
         #Behavior
         self.behavior=deepcopy(self._behavior)
         self.behavior.update(behavior)
@@ -1220,53 +1226,66 @@ class RingedPlanet(object):
         Reads-in the fourier coefficients from the specified files
         Reading is by a FORTRAN function
         """
-        if fname_planet is not None:
-            i = j = 0
-            with open(fname_planet) as file:
-                for line in file: 
-                    if line.rstrip()[0] != "#":
-                        if i == 0:
-                            nmatp = int(line.rstrip())
-                        elif i ==1:
-                            nmugsp = int(line.rstrip())
-                        else:
-                            j += 1
-                        i += 1
+        if self.physics["extension"]=="pixx":
+            import pryngles.pixx as pixx
+            if fname_planet is not None:
+                i = j = 0
+                with open(fname_planet) as file:
+                    for line in file: 
+                        if line.rstrip()[0] != "#":
+                            if i == 0:
+                                nmatp = int(line.rstrip())
+                            elif i ==1:
+                                nmugsp = int(line.rstrip())
+                            else:
+                                j += 1
+                            i += 1
 
-            nfoup = int( (j-nmugsp)/(nmugsp**2) )
-            
-            self.nfoup = nfoup
-            self.nmatp = nmatp
-            self.nmugsp = nmugsp
-            
-            # Reflected light
-            self.xmup,self.rfoup = pixx.rdfous_planet(fname_planet,nfoup,nmatp,nmugsp)
-                        
-        if fname_ring is not None:
-            i = j = 0
-            with open(fname_ring) as file:
-                for line in file: 
-                    if line.rstrip()[0] != "#":
-                        if i == 0:
-                            nmatr = int(line.rstrip())
-                        elif i ==1:
-                            nmugsr = int(line.rstrip())
-                        else:
-                            j += 1
-                        i += 1
+                nfoup = int( (j-nmugsp)/(nmugsp**2) )
 
-            nfour = int( (j-nmugsr)/(nmugsr**2) )
-            
-            self.nfour = nfour
-            self.nmatr = nmatr
-            self.nmugsr = nmugsr
-            
-            # Reflected light
-            self.xmur,self.rfour = pixx.rdfous_ring(fname_ring,False,nfour,nmatr,nmugsr)
-            
-            # Transmitted light
-            self.xmur,self.tfour = pixx.rdfous_ring(fname_ring,True,nfour,nmatr,nmugsr)
-            
+                self.nfoup = nfoup
+                self.nmatp = nmatp
+                self.nmugsp = nmugsp
+
+                # Reflected light
+                self.xmup,self.rfoup = pixx.rdfous_planet(fname_planet,nfoup,nmatp,nmugsp)
+
+            if fname_ring is not None:
+                i = j = 0
+                with open(fname_ring) as file:
+                    for line in file: 
+                        if line.rstrip()[0] != "#":
+                            if i == 0:
+                                nmatr = int(line.rstrip())
+                            elif i ==1:
+                                nmugsr = int(line.rstrip())
+                            else:
+                                j += 1
+                            i += 1
+
+                nfour = int( (j-nmugsr)/(nmugsr**2) )
+
+                self.nfour = nfour
+                self.nmatr = nmatr
+                self.nmugsr = nmugsr
+
+                # Reflected light
+                self.xmur,self.rfour = pixx.rdfous_ring(fname_ring,False,nfour,nmatr,nmugsr)
+
+                # Transmitted light
+                self.xmur,self.tfour = pixx.rdfous_ring(fname_ring,True,nfour,nmatr,nmugsr)
+        elif self.physics["extension"] == "cpixx":
+            if fname_planet is not None:
+                self.SCp=StokesScatterer(fname_planet)
+                self.nmatp = self.SCp.nmat
+
+            if fname_ring is not None:
+                self.SCr=StokesScatterer(fname_ring)
+                self.nmatr = self.SCr.nmat
+
+        else:
+            raise ValueError(f"The extension '{self.physics['extension']}' is not recognized (available 'pixx', 'cpixx')")
+      
     ##############################################################
     # INTERNAL MACHINERY METHODS
     ##############################################################
@@ -2733,10 +2752,31 @@ class RingedPlanet(object):
         
         if cond.sum() > 0:
             planet_used = True
-            self.Stokesp[cond,:] = pixx.reflection(cond.sum(), self.phidiffps[cond], self.betaps[cond],
-                                                    abs(self.etaps[cond]), abs(self.zetaps[cond]),
-                                                    self.nmugsp,self.nmatp,self.nfoup,self.xmup,self.rfoup,
-                                                    np.ones(cond.sum())*self.normp*self.afp)
+            
+            if self.physics["extension"] == "pixx":
+                self.Stokesp[cond,:] = pixx.reflection(cond.sum(), self.phidiffps[cond], self.betaps[cond],
+                                                        abs(self.etaps[cond]), abs(self.zetaps[cond]),
+                                                        self.nmugsp,self.nmatp,self.nfoup,self.xmup,self.rfoup,
+                                                        np.ones(cond.sum())*self.normp*self.afp)
+                """This code is used for debugging purposes
+                self.save_values+=[
+                            dict(
+                                obj="planet",
+                                args=[
+                                    cond.sum(), self.phidiffps[cond], self.betaps[cond],
+                                    abs(self.etaps[cond]), abs(self.zetaps[cond]),
+                                    self.nmugsp,self.nmatp,self.nfoup,self.xmup,self.rfoup,
+                                    np.ones(cond.sum())*self.normp*self.afp
+                                ],
+                                stokes=self.Stokesp[cond,:],
+                            )
+                        ]
+                """
+            elif self.physics["extension"] == "cpixx":
+                 self.Stokesp[cond,:] = self.SCp.calculate_stokes(self.phidiffps[cond],self.betaps[cond],
+                                                                  abs(self.etaps[cond]),abs(self.zetaps[cond]),
+                                                                  np.ones(cond.sum())*self.normp*self.afp
+                                                                 )
                                                    
             # Check if the rings are seen edge-on and illuminated edge-on
             vcheck = abs(np.arccos(self.cosio)*180/np.pi - 90.0) > angle_eps # seen
@@ -2790,16 +2830,57 @@ class RingedPlanet(object):
         if cond.sum() > 0:
             ring_used = True
             if back:
-                self.Stokesr[cond,:] = pixx.reflection(cond.sum(), self.phidiffrs[cond], self.betars[cond],
-                                                        abs(self.etars[cond]), abs(self.zetars[cond]),
-                                                        self.nmugsr,self.nmatr,self.nfour,self.xmur,self.tfour,
-                                                        np.ones(cond.sum())*self.normr*self.afr)
+                if self.physics["extension"] == "pixx":
+                    self.Stokesr[cond,:] = pixx.reflection(cond.sum(), self.phidiffrs[cond], self.betars[cond],
+                                                            abs(self.etars[cond]), abs(self.zetars[cond]),
+                                                            self.nmugsr,self.nmatr,self.nfour,self.xmur,self.tfour,
+                                                            np.ones(cond.sum())*self.normr*self.afr)
+                    """This code is used for debugging purposes
+                    self.save_values+=[
+                            dict(
+                                obj="ring back",
+                                args=[
+                                    cond.sum(),self.phidiffrs[cond], self.betars[cond],
+                                    abs(self.etars[cond]), abs(self.zetars[cond]),
+                                    self.nmugsr,self.nmatr,self.nfour,self.xmur,self.tfour,
+                                    np.ones(cond.sum())*self.normr*self.afr
+                                ],
+                                stokes=self.Stokesr[cond,:],
+                            )
+                        ]
+                    """
+                elif self.physics["extension"] == "cpixx":
+                    self.Stokesr[cond,:] = self.SCr.calculate_stokes(self.phidiffrs[cond], self.betars[cond],
+                                                                     abs(self.etars[cond]), abs(self.zetars[cond]),
+                                                                     np.ones(cond.sum())*self.normr*self.afr,
+                                                                     qreflection=0
+                                                                    )
+
             else:
-                self.Stokesr[cond,:] = pixx.reflection(cond.sum(), self.phidiffrs[cond], self.betars[cond],
-                                                        abs(self.etars[cond]), abs(self.zetars[cond]),
-                                                        self.nmugsr,self.nmatr,self.nfour,self.xmur,self.rfour,
-                                                        np.ones(cond.sum())*self.normr*self.afr)
-                           
+                if self.physics["extension"] == "pixx":
+                    self.Stokesr[cond,:] = pixx.reflection(cond.sum(), self.phidiffrs[cond], self.betars[cond],
+                                                            abs(self.etars[cond]), abs(self.zetars[cond]),
+                                                            self.nmugsr,self.nmatr,self.nfour,self.xmur,self.rfour,
+                                                            np.ones(cond.sum())*self.normr*self.afr)
+                    self.save_values+=[
+                            dict(
+                                obj="ring forward",
+                                args=[
+                                    cond.sum(), self.phidiffrs[cond], self.betars[cond],
+                                    abs(self.etars[cond]), abs(self.zetars[cond]),
+                                    self.nmugsr,self.nmatr,self.nfour,self.xmur,self.rfour,
+                                    np.ones(cond.sum())*self.normr*self.afr
+                                ],
+                                stokes=self.Stokesr[cond,:],
+                            )
+                        ]
+                elif self.physics["extension"] == "cpixx":
+                    self.Stokesr[cond,:] = self.SCr.calculate_stokes(self.phidiffrs[cond], self.betars[cond],
+                                                                     abs(self.etars[cond]), abs(self.zetars[cond]),
+                                                                     np.ones(cond.sum())*self.normr*self.afr,
+                                                                     qreflection=1
+                                                                    )
+
             Sr = self.Stokesr[:,:-1]
             Pr = self.Stokesr[:,-1]
             
@@ -2844,6 +2925,12 @@ class RingedPlanet(object):
             Ptot = np.sqrt(Stot[1]**2 + Stot[2]**2)/Stot[0]
         self.Stot = Stot
         self.Ptot = Ptot
+        
+    def _save_reflection_values(self):
+        f=open("/tmp/reflection-test.pkl","wb")
+        pickle.dump(self.save_values,f)
+        f.close()
+        print("Saving reflection values in /tmp/reflection-test.pkl")
         
     def updateTransit(self):
         """

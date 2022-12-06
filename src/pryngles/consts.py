@@ -6,7 +6,7 @@
 #.##......##..##....##....##..##..##..##..##......##..........##.#
 #.##......##..##....##....##..##...####...######..######...####..#
 #................................................................#
-
+#                                                                #
 # PlanetaRY spanGLES                                             #
 #                                                                #
 ##################################################################
@@ -81,6 +81,15 @@ Consts.rsaturn=60268e3 #m, equatorial radius, source:
 #For compatibility purposes with legacy: remove when legacy is retired
 RAD=Consts.rad
 DEG=Consts.deg
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Constants of module extensions
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+import ctypes
+DOUBLE = ctypes.c_double
+PDOUBLE = ctypes.POINTER(DOUBLE)
+PPDOUBLE = ctypes.POINTER(PDOUBLE)
+PPPDOUBLE = ctypes.POINTER(PPDOUBLE)
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Constants of module science

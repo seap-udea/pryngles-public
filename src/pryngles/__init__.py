@@ -6,7 +6,7 @@
 #.##......##..##....##....##..##..##..##..##......##..........##.#
 #.##......##..##....##....##..##...####...######..######...####..#
 #................................................................#
-
+#                                                                #
 # PlanetaRY spanGLES                                             #
 #                                                                #
 ##################################################################
@@ -166,9 +166,12 @@ class PrynglesCommon(object):
 
 from pryngles.version import *
 
-#Utility modules
+#Constants
 from pryngles.consts import *
+
+#Utility modules
 from pryngles.misc import *
+from pryngles.extensions import *
 from pryngles.science import *
 from pryngles.plot import *
 from pryngles.orbit import *

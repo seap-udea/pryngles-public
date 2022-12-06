@@ -6,7 +6,7 @@
 #.##......##..##....##....##..##..##..##..##......##..........##.#
 #.##......##..##....##....##..##...####...######..######...####..#
 #................................................................#
-
+#                                                                #
 # PlanetaRY spanGLES                                             #
 #                                                                #
 ##################################################################
@@ -71,7 +71,7 @@ class Test(unittest.TestCase):
             #Middle transit
             ts=(ts-ts[0])/Const.days
 
-            print(max(1e6*(Rps+Rrs)))
+            #print(max(1e6*(Rps+Rrs)))
 
             #Plot
             #"""
@@ -376,7 +376,7 @@ class Test(unittest.TestCase):
         #Optical factors
         self.assertEqual(np.isclose([np.std(self.P.etaps),np.mean(self.P.etars),
                                      np.std(self.P.zetaps),np.mean(self.P.zetars)],
-                                    [0.2896162404111873, 0.0, 0.5693825632088421, 0.8660254037844385],
+                                    [0.5775748371240247, 0.0, 0.5693825632088421, 0.8660254037844385],
                                     rtol=1e-2).tolist(),
                          [True]*4)
         
@@ -427,7 +427,7 @@ class Test(unittest.TestCase):
         
         #Etas
         self.assertEqual(np.isclose([(self.Pl.etaps[:int(self.Pl.Np/3)]).sum()],
-                                    [148.72325636637626],
+                                    [-55.08748471144108],
                                     rtol=1e-2).tolist(),
                          [True]*1)
         self.assertEqual(np.isclose([self.Pl.etars[0]],
@@ -567,15 +567,15 @@ class Test(unittest.TestCase):
         self.Pl.changeObserver([+30.0*DEG,0.0*DEG])
         #Normal up
         self.Pl.changeStellarPosition(60.0*DEG)
-        self.assertEqual([self.Pl.ap.sum(),self.Pl.ar.sum()],[329,690],[True]*2)
+        self.assertEqual([self.Pl.ap.sum(),self.Pl.ar.sum()],[328,690],[True]*2)
         #Normal down
         self.Pl.changeStellarPosition(260.0*DEG)        
-        self.assertEqual([self.Pl.ap.sum(),self.Pl.ar.sum()],[175,677],[True]*2)
+        self.assertEqual([self.Pl.ap.sum(),self.Pl.ar.sum()],[172,677],[True]*2)
         #Transit
         lamb=+210.0*DEG
         self.Pl._updateStellarPosition(lamb)
         self.Pl.changeStellarPosition(lamb+1*self.Pl.thetas)        
-        self.assertEqual([self.Pl.ap.sum(),self.Pl.ar.sum()],[270,683],[True]*2)
+        self.assertEqual([self.Pl.ap.sum(),self.Pl.ar.sum()],[269,683],[True]*2)
         #Occultation
         lamb=+30.0*DEG
         self.Pl._updateStellarPosition(lamb)
@@ -599,7 +599,7 @@ class Test(unittest.TestCase):
         self.Pl.changeStellarPosition(45.0*DEG)
         self.Pl.changeObserver([30.0*DEG,0.0*DEG])
         self.Pl._updateVisibility()
-        self.assertEqual([self.Pl.vp.sum(),self.Pl.vr.sum()],[435,723],[True]*2)
+        self.assertEqual([self.Pl.vp.sum(),self.Pl.vr.sum()],[434,723],[True]*2)
         self.assertEqual([self.Pl.vpo.sum(),self.Pl.vro.sum()],[503,852],[True]*2)
     
     def test_shadow(self):
@@ -607,13 +607,13 @@ class Test(unittest.TestCase):
         self.Pl._resetIllumination()
         self.Pl._updatePlanetShadow(epos=self.Pl.estar_equ,mask=self.Pl.sp)
         self.Pl._updateRingsShadow(epos=self.Pl.estar_equ,mask=self.Pl.sr)
-        self.assertEqual(self.Pl.sp.sum(),101,True)        
+        self.assertEqual(self.Pl.sp.sum(),122,True)        
         self.assertEqual(self.Pl.sr.sum(),103,True)        
 
     def test_update_illumination(self):
         self.Pl.changeObserver([+0.0*DEG,+90.0*DEG])
         self.Pl.changeStellarPosition(45.0*DEG)
-        self.assertEqual([self.Pl.ip.sum(),self.Pl.np.sum()],[401,416],[True]*2)
+        self.assertEqual([self.Pl.ip.sum(),self.Pl.np.sum()],[400,416],[True]*2)
         self.assertEqual([self.Pl.ir.sum(),self.Pl.nr.sum()],[749,749],[True]*2)
         self.Pl.changeStellarPosition(245.0*DEG)
         self.assertEqual([self.Pl.ip.sum(),self.Pl.np.sum()],[407,83],[True]*2)

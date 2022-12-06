@@ -10,6 +10,7 @@ list of the features introduced in each version family of the package.
 - **0.9.x versions**:
 
   - Major upgrade in the optical model of the legacy module.
+  - Reflection is now calculated using cpixx extension.
   - Method `updateReflection` introduced to calculate the flux
     reflected on a realistic surface (atmospheric atmosphere or
     ring/disk).
