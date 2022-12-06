@@ -163,10 +163,20 @@ Let's have some `Pryngles`.
 
 ## Realistic scattering and polarization
 
-Starting in version 0.9.x Pryngles is able to compute fluxes using a
+Starting in version 0.9.x, Pryngles is able to compute fluxes using a
 more realistic model for scattering that includes polarization. The
 new features are not yet flexible enough but they can be used to
 create more realistic light curves.
+
+These new features are based on the science and Fortran code developed
+by Prof. Daphne Stam and collaborator, and adapted to Pryngles
+environment by Allard Veenstra. For the science behind the scattering
+and polarization code see:
+
+> Rossi, L., Berzosa-Molina, J., & Stam, D. M. (2018). PyMieDAP: a
+  Python–Fortran tool for computing fluxes and polarization signals of
+  (exo) planets. Astronomy & Astrophysics, 616,
+  A147. [arXiv:1804.08357](https://arxiv.org/abs/1804.08357)
 
 Here is a simple example of how to compute the light curve of a ringed planet
 whose atmosphere scatters reallistically the light of the star. 
