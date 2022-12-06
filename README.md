@@ -169,9 +169,10 @@ new features are not yet flexible enough but they can be used to
 create more realistic light curves.
 
 These new features are based on the science and Fortran code developed
-by Prof. Daphne Stam and collaborator, and adapted to Pryngles
-environment by Allard Veenstra. For the science behind the scattering
-and polarization code see:
+by Prof. Daphne Stam and collaborators, and adapted to Pryngles
+environment by Allard Veenstra (Fortran and Python wrapping) and Jorge
+I. Zuluaga (translation to C and `ctypes`). For the science behind the
+scattering and polarization code see:
 
 > Rossi, L., Berzosa-Molina, J., & Stam, D. M. (2018). PyMieDAP: a
   Python–Fortran tool for computing fluxes and polarization signals of
