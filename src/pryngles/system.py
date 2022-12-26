@@ -21,7 +21,6 @@ from pryngles import *
 
 import rebound as rb
 from tqdm import tqdm
-from anytree.util import commonancestors
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

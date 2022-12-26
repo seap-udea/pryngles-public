@@ -24,7 +24,7 @@ import unittest
 import spiceypy as spy
 import numpy as np
 import scipy as sp
-from scipy.optimize import newton
+from scipy.optimize import newton,least_squares
 import math
 math.arctan=math.atan
 math.arcsin=math.asin
@@ -465,6 +465,64 @@ class Util(object):
         ARp=np.pi*Rp**2+np.pi*(re2-ri2)*Rp**2
 
         return ARp
+    
+    def calcStartingPosition(orbit_i,
+                             ring_i,
+                             ring_l):
+        """
+        Function that calculates the starting true anomaly and observer location(longitude, inclination) 
+        to generate an orbit with the given orbit inclination, ring inclination, ring longitude rotation
+        and one that starts with the planet situated below the star, all with respect to the observer.
+        
+        Input parameters:
+            -orbit_i: Orbital inclination with respect to the observer, 0 is seeing the orbit face-on and
+                      90 is seeing the orbit edge-on.
+            -ring_i:  Ring inclination with respect to the observer, 0 is face-on and 90 is edge-on.
+            -ring_l:  Ring longitude rotation, 0 is face-on, so no rotation, and 90 is edge-on.
+            
+        Output parameters:
+            -gamma:     Given ring inclination with respect to the ecliptic system
+            -beta_obs:  Inclination of the observer with respect to the ecliptic system
+            -lamb_obs:  Longitude of the observer with respect to the ecliptic system
+            -lamb_star: Starting true anomaly of the star to ensure the planet is situated under the star
+            
+        IMPORTANT:
+            All input parameters are in degrees while the output is in radians
+            output is rounded to the eight decimal to decrease numerical errors
+        """
+        orbit_i = orbit_i*DEG
+        ring_i = ring_i*DEG
+        ring_l = ring_l*DEG
+
+        if abs(ring_l) < 0.01:
+            beta_obs = np.pi/2 - orbit_i
+            lamb_obs = np.pi/2
+            gamma = orbit_i - ring_i
+            if gamma > np.pi/2:
+                gamma -= np.pi
+            elif gamma < -np.pi/2:
+                gamma += np.pi  
+        else:
+            res = least_squares(Util.funcNormalRing, np.array([np.pi/4,ring_l,np.pi/2 - orbit_i]), args=(ring_i,ring_l,orbit_i))
+            gamma,lamb_obs,beta_obs = res.x
+            lamb_obs = lamb_obs - int(lamb_obs/(2*np.pi)) * 2*np.pi # Ensure longitude stays within [-2*pi,2*pi]
+            verbose(VERB_DEEP, "gamma, lamb, beta: ", gamma/DEG, lamb_obs/DEG, beta_obs/DEG)
+            verbose(VERB_DEEP, "Check: ",Util.funcNormalRing(np.array([gamma,lamb_obs,beta_obs]),ring_i,ring_l,orbit_i))
+
+        lamb_star = np.pi - abs(lamb_obs)
+        if lamb_obs >= 0:
+            lamb_star *= -1
+        return round(gamma,8), round(beta_obs,8), round(lamb_obs,8), round(lamb_star,8)
+    
+    def funcNormalRing(x,a,b,c):
+        """
+        Equates the normal vector of the ring in the ecliptic system to the 
+        normal vector of the ring in the observer system. 
+        """
+        return [np.sin(x[1]+np.pi/2)*np.sin(x[0]) - np.sin(b)*np.cos(a),
+                np.cos(np.pi/2-x[2])*np.cos(x[1]+np.pi/2)*np.sin(x[0]) + np.sin(np.pi/2-x[2])*np.cos(x[0]) - np.sin(a),
+                np.cos(np.pi/2-x[2])*np.cos(x[0]) - np.sin(np.pi/2-x[2])*np.cos(x[1]+np.pi/2)*np.sin(x[0]) - np.cos(b)*np.cos(a),
+                x[2] - np.pi/2 + c]
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1117,7 +1175,7 @@ class RingedPlanet(object):
                  CU=CanonicalUnits(UL=Const.au,UM=Const.Msun),
                  #Basic
                  Rstar=Const.Rsun/Const.au,Rplanet=Const.Rsat/Const.au,
-                 Rint=1.5,Rext=2.5,i=30*DEG,a=0.2,e=0.6,
+                 Rint=1.5,Rext=2.5,i=30*DEG,roll=0*DEG,a=0.2,e=0.6,
                  #Orbit 
                  Mstar=1,x=0,lambq=0,t0=0,kepler=False,
                  #Observer
@@ -1129,7 +1187,8 @@ class RingedPlanet(object):
                  #Physical properties
                  physics=dict(),
                  #Fourier coefficient files
-                 fname_planet = Misc.get_data("fou_gasplanet.dat"),
+                 #fname_planet = Misc.get_data("fou_gasplanet.dat"),
+                 fname_planet = Misc.get_data("fou_gasplanet_optical_50.dat"),
                  fname_ring = Misc.get_data("fou_ring_0_4_0_8.dat")
                 ):
         """
@@ -1141,6 +1200,9 @@ class RingedPlanet(object):
         #Behavior
         self.behavior=deepcopy(self._behavior)
         self.behavior.update(behavior)
+        
+        #Set initial reference frame for polarization
+        self.reference_plane = "Detector" # "Detector" or "Planetary"
         
         #Units
         self.CU=CU
@@ -1170,6 +1232,7 @@ class RingedPlanet(object):
 
         #Ring orientation
         self.i=i
+        self.roll=roll
         self._setEquEclTransform()
                         
         #Sample palnet and rings
@@ -1478,7 +1541,11 @@ class RingedPlanet(object):
         self.M_obs2equ=spy.invert(self.M_equ2obs)
         #Effective ring inclination: io = 0 (rings are perpendicular to observer line of sight)
         self.cosio=spy.vdot(self.nobs_equ,self.nr_equ)
-        self.io=mh.arccos(np.abs(self.cosio))
+        if self.cosio > 1:
+            self.cosio = 1.0
+        elif self.cosio < -1:
+            self.cosio = -1.0
+        self.io=mh.arccos(self.cosio)
 
     def _updateSamplingObserver(self):
         """
@@ -1703,6 +1770,7 @@ class RingedPlanet(object):
         self.ap=np.zeros(self.Np)
         self.apsr = np.zeros(self.Np, dtype=bool)
         self.apso = np.zeros(self.Np, dtype=bool)
+        self.apsb = np.zeros(self.Np, dtype=bool)
         self.ar=np.zeros(self.Nrt)
 
     def _updateActivity(self):
@@ -1718,6 +1786,9 @@ class RingedPlanet(object):
         
         # Facets that are visible but the line of sight is blocked by the rings
         self.apso=(~((~self.vps)+((self.cp)+((~self.ip)*(~self.tp)*(~self.np)))))
+        
+        # Facets that are both of the above
+        self.apsb=(~((~self.vps)+((self.cp)+((~self.ips)*(~self.tp)*(~self.np)))))
         
         #Ring active facets
         self.ar=(~((~self.vr)+((self.cr)+((~self.ir)*(~self.tr)))))+(self.fr)
@@ -1955,11 +2026,14 @@ class RingedPlanet(object):
 
         vp=self.vp if showring else self.vpo
         #Plot planet
-        # Facets that are illuminated through the rings
+        #  Facets that are illuminated through the rings
         condspr = (self.apsr)*(self.ips)
         
         # Facets that are visible but the line of sight is blocked by the rings
         condspo = (self.apso)*(self.ip)
+        
+        # Facets that are both of the above
+        condspb = self.apsb 
         
         cond=(self.ap)*(self.ip)
         ax.scatter(self.rps_obs[cond,0]/self.Rp,
@@ -1975,6 +2049,9 @@ class RingedPlanet(object):
                        color=self._plot["hp"],s=3*self._plot["sp"],alpha=self._plot["ha"])
             ax.scatter(self.rps_obs[condspo,0]/self.Rp,
                        self.rps_obs[condspo,1]/self.Rp,
+                       color=self._plot["tp"],s=3*self._plot["sp"],alpha=self._plot["ha"])
+            ax.scatter(self.rps_obs[condspb,0]/self.Rp,
+                       self.rps_obs[condspb,1]/self.Rp,
                        color=self._plot["tp"],s=3*self._plot["sp"],alpha=self._plot["ha"])
 
         #Activity
@@ -2126,16 +2203,22 @@ class RingedPlanet(object):
             
         return fig1,fig2,fig3
     
-    def plotRingedPlanetFlux(self,axis=True,
-                         showring=True,showborder=False,
+    def plotRingedPlanetFlux(self,view='side',
+                         visibility=True,axis=True,
+                         showring=True,showborder=False,showactive=False,
                          showfig=True,showstar=False,
                          showtitle=True,bgdark=True,
                          showtype='Flux'
                         ):
         """
-        NEEDS: -_updateActivity
-        Plot the observer view of a ringed planet
+        Plot three different views of a ringed planet: from the ecliptic, from the observer and 
+        from the star.
         Optional parameters:
+            view='side': From which you want to see the planet in the {ecl} system, string
+                Valid options:
+                    'side': Observer is in looking towards -yaxis.
+                    'top': Observer is in looking towards -zaxis.
+            visibility=True: Show information on visibility in the ecliptic system, bool.
             axis=True: Show the axis on the plot?, bool.
             showring=True: Show rings in the plots?, bool.
             showborder=False: Show border of the rings?, bool.
@@ -2147,7 +2230,6 @@ class RingedPlanet(object):
             showtitle=True: Show title of the plot.
             
             bgdark=True: Dark background.
-            showtype: Show flux or degree of polarization
         Return:
             fig1,fig2,fig3: Figure objects.
         Plotting options:
@@ -2202,20 +2284,26 @@ class RingedPlanet(object):
         vp=self.vp if showring else self.vpo
         
         # Color settings
-        cmap = 'YlOrRd'    
+        cmap = 'hot'   
         if showtype=='Flux':
-            Rp = self.Rip
-            Rr = self.Rir
-            cmax = np.max([np.max(Rp),np.max(Rr)])
-            cmin = abs(np.min([np.min(Rp[Rp != 0.0]),np.min(Rr[Rr != 0.0])]))
+            Rp = self.Rip/(self.normp*self.afp)
+            Rr = self.Rir/(self.normr*self.afr)
+            cmax = 10
+            cmin = 1e-4
+            norm = mpl.colors.LogNorm(vmin=cmin,vmax=cmax)
         elif showtype=='Degree':
-            Rp = self.Pip
-            Rr = self.Pir
-            cmax = np.max([np.max(Rp),np.max(Rr)])
-            cmin = abs(np.min([np.min(Rp[Rp != 0.0]),np.min(Rr[Rr != 0.0])]))
+            Rp = abs(self.Pip)
+            Rr = abs(self.Pir)
+            cmax = 1.0
+            cmin = 1e-2
+            Rr[Rr==0.0] = 1e-3
+            norm = mpl.colors.LogNorm(vmin=cmin,vmax=cmax)
         else:
             Rp = np.ones(self.Np)*100
             Rr = np.ones(self.Nr)*100
+            cmax = 100
+            cmin = 1
+            norm = mpl.colors.Normalize(vmin=cmin,vmax=cmax)            
         
         #Plot planet
         # Facets that are illuminated through the rings
@@ -2224,24 +2312,30 @@ class RingedPlanet(object):
         # Facets that are visible but the line of sight is blocked by the rings
         condspo = (self.apso)*(self.ip)
         
+        # Facets that are both of the above
+        condspb = self.apsb 
+        
         cond=(self.ap)*(self.ip) # Facets that are visible and illuminated
-        ax.scatter(self.rps_obs[cond,0]/self.Rp,
-                   self.rps_obs[cond,1]/self.Rp,
-                   c=Rp[cond],cmap=cmap,s=self._plot["sp"])
+        
+        # All facets
+        condo = cond + condspr + condspo + condspb
+        
+        if self.behavior["shadows"]:
+            ax.scatter(self.rps_obs[condo,0]/self.Rp,
+                       self.rps_obs[condo,1]/self.Rp,
+                       c=Rp[condo],norm=norm,
+                       cmap=cmap,s=self._plot["sp"])
+        else:
+            ax.scatter(self.rps_obs[cond,0]/self.Rp,
+                       self.rps_obs[cond,1]/self.Rp,
+                       c=Rp[cond],norm=norm,
+                       cmap=cmap,s=self._plot["sp"])
         
         # Facets that are not illuminated
-        cond=(op)*(~self.ip)*(vp)
+        cond=(op)*(~self.ip)*(vp)*(~condspr)*(~condspo)*(~condspb)
         ax.scatter(self.rps_obs[cond,0]/self.Rp,
                    self.rps_obs[cond,1]/self.Rp,
                    color=self._plot["dp"],s=self._plot["sp"],alpha=self._plot["da"])
-                   
-        if self.behavior["shadows"]:
-            ax.scatter(self.rps_obs[condspr,0]/self.Rp,
-                       self.rps_obs[condspr,1]/self.Rp,
-                       c=Rp[condspr],cmap=cmap,s=3*self._plot["sp"],alpha=self._plot["ha"])
-            ax.scatter(self.rps_obs[condspo,0]/self.Rp,
-                       self.rps_obs[condspo,1]/self.Rp,
-                       c=Rp[condspo],cmap=cmap,s=3*self._plot["sp"],alpha=self._plot["ha"])
 
         if showstar:
             cond=(op)*(self.tp)
@@ -2258,11 +2352,13 @@ class RingedPlanet(object):
             cond=(self.ir)*(self.vr)
             ax.scatter(self.rrs_obs[cond,0]/self.Rp,
                        self.rrs_obs[cond,1]/self.Rp,
-                       c=Rr[cond],cmap=cmap,s=self._plot["sr"])
+                       c=Rr[cond],norm=norm,
+                       cmap=cmap,s=self._plot["sr"])
             cond = self.fr
             ax.scatter(self.rrs_obs[cond,0]/self.Rp,
                        self.rrs_obs[cond,1]/self.Rp,
-                       c=Rr[cond],cmap=cmap,s=self._plot["sr"],alpha=self._plot["ha"])
+                       c=Rr[cond],norm=norm,
+                       cmap=cmap,s=self._plot["sr"],alpha=self._plot["ha"])
             if self.behavior["shadows"]:
                 cond=(self.sr)*(self.vr)
                 ax.scatter(self.rrs_obs[cond,0]/self.Rp,
@@ -2309,21 +2405,23 @@ class RingedPlanet(object):
         ax.axis("off")
         
         # Color bar
-        norm = mpl.colors.LogNorm(vmin=cmin,vmax=cmax)
         sm = plt.cm.ScalarMappable(cmap=cmap,norm=norm)
         sm.set_array([])
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right',size="7%",pad=0.2)
         cb = plt.colorbar(sm, cax=cax)
+        cb.ax.yaxis.set_tick_params(color='white', labelcolor='white',labelsize=14)
+        
         if showtype=='Flux':
-            cb.set_label('Flux [ppm]',color='white')
+            cb.set_label('Flux [ppm/m$^2$]',color='white')
+            y_major = LogLocator(base=10)
         elif showtype=='Degree':
             cb.set_label('Degree of polarization [-]',color='white')
+            y_major = LogLocator(base=10)
         else:
             cb.set_label('Unkown [?]',color='white')
+            y_major = MultipleLocator(10)
             
-        cb.ax.yaxis.set_tick_params(color='white', labelcolor='white',labelsize=14)
-        y_major = LogLocator(base=10)
         cb.ax.yaxis.set_major_locator(y_major)
         cb.outline.set_edgecolor('white')
         fig1.patch.set_facecolor('black')
@@ -2563,61 +2661,117 @@ class RingedPlanet(object):
         Require:
             - _updateStellarPosition
             - _updateObserver
-        """
+        """       
+        #########################
+        ### Extra definitions ###
+        #########################
+        
+        # Location of planetary spangles with respect to planetary scattering plane
+        rot_scat = np.arctan2(self.nstar_obs[1],self.nstar_obs[0])
+        Rz = self.rotation_matrix_z(rot_scat)       
+        self.rps_scat = np.array([np.matmul(Rz,r) for r in self.rps_obs])
+        
+        # Normal vector of the ring
+        nrs_obs = spy.ucrss(self.rrs_obs[0,:],self.rrs_obs[1,:])
+        
+        # Make sure the normal vector is facing the observer
+        if nrs_obs[2] < 0:
+            nrs_obs *= -1
+        
+        #########################
+        ###       Angles      ###
+        #########################
+        
         #Incident angles
         self.etaps=np.inner(self.nstar_obs,self.nps_obs) # Changed
         self.zetaps=self.nps_obs[:,2]
         
         #Scattered angles
-        self.etars=np.inner(self.nstar_equ,self.nr_equ)*np.ones(self.Nrt) # Changed
-        self.zetars=self.cosio*np.ones(self.Nrt) # Changed
+        self.etars=np.inner(self.nstar_equ,self.nr_equ)*np.ones(self.Nrt) 
+        self.zetars=self.cosio*np.ones(self.Nrt)
             
-        # Added angles
-        self.alphaps=self.nstar_obs[2] # cos(alpha)
+        # Phase angle
+        self.alphaps= self.nstar_obs[2] # cos(alpha)
         
+        # Azimuthal difference angle for planet
         t1 = self.alphaps - self.zetaps*self.etaps
         t2 = np.sin(np.arccos(self.etaps))*np.sin(np.arccos(self.zetaps))
         t3 = t1/t2
         t3[t3 > 1] = 1.0
         t3[t3 < -1] = -1.0
+        t3[abs(t3) < 1e-6] = 0.0
             
         self.phidiffps = np.pi - np.arccos(t3)
         self.phidiffps[abs(t2) <= 1e-9] = 0.0 
-        self.phidiffps[self.rps_obs[:,1] < 0] *= -1
-            
+        self.phidiffps[self.rps_scat[:,1] < 0 ] *= -1 
+        
+        # Azimuthal difference angle for ring    
         t1 = self.alphaps - self.zetars*self.etars
         t2 = np.sin(np.arccos(self.etars))*np.sin(np.arccos(self.zetars))
         t3 = t1/t2
         t3[t3 > 1] = 1.0
         t3[t3 < -1] = -1.0
+        t3[abs(t3) < 1e-6] = 0.0
         
-        self.phidiffrs = np.pi - np.arccos(t3)
-        self.phidiffrs[abs(t2) <= 1e-9] = 0.0 
-        
-        # Beta calculation for rings and planet to planetary scattering plane
-        t1 = self.etars - self.alphaps*self.zetars
-        t2 = np.sin(np.arccos(self.alphaps))*np.sin(np.arccos(self.zetars))
-        t3 = t1/t2
-        t3[t3 > 1] = 1.0
-        t3[t3 < -1] = -1.0
-        self.betars = np.arccos(t3)
-        self.betars[abs(t2) <= 1e-9] = 0.0 
-        
-        if self.nstar_obs[0] >= 0:
+        self.phidiffrs = np.arccos(t3)-np.pi
+        ang1 = np.arctan2(self.nstar_obs[1],self.nstar_obs[0])
+        ang2 = np.arctan2(nrs_obs[1],nrs_obs[0])
+        if nrs_obs[1] >= 0:
+            if ang1 > ang2 or ang1 < (ang2-np.pi):
+                self.phidiffrs *= -1
+        else:
+            if ang2 < ang1 and (ang2+np.pi) > ang1:
+                self.phidiffrs *= -1
+        self.phidiffrs[abs(t2) <= 1e-9] = 0.0  
+            
+        # Beta angle for planet
+        if self.reference_plane == "Planetary":
+            self.betaps = np.arctan(self.rps_scat[:,1]/self.rps_scat[:,0])
+            self.betaps[self.rps_scat[:,0]*self.rps_scat[:,1] < 0] += np.pi
+        elif self.reference_plane == "Detector":
             self.betaps = np.arctan(self.rps_obs[:,1]/self.rps_obs[:,0])
             self.betaps[self.rps_obs[:,0]*self.rps_obs[:,1] < 0] += np.pi
-        else:
-            self.betaps = -np.arctan(self.rps_obs[:,1]/self.rps_obs[:,0])
-            self.betaps[self.rps_obs[:,0]*self.rps_obs[:,1] >= 0] += np.pi
+            
+        # Beta angle for ring
+        if self.reference_plane == "Planetary":
+            nr_obs_nvec = spy.ucrss(nrs_obs,np.array([0,0,1])) # normal vector to obs_nr plane    
+            obs_star_nvec = spy.ucrss(self.nstar_obs,np.array([0,0,1]))
+            self.betars = np.arccos(np.inner(nr_obs_nvec,obs_star_nvec))*np.ones(self.Nrt)
+            
+            # If normal vector is pointing down make sure the beta angle rotates correctly
+            if self.nstar_obs[0] < 0:
+                self.betars *= -1
+                self.betars += np.pi   
+        elif self.reference_plane == "Detector":
+            # Calculate angle normal vector makes with the x-axis in the observer frame
+            th_nr_x = np.arctan2(nrs_obs[2],nrs_obs[0])
         
-        # Beta calculation for rings and planet to detector plane
-        i_orbit = np.pi/2 - self.eobs_ecl[1]
-        lamb = self.lamb - np.pi/2
-        if (0 <= lamb <= np.pi/2) or (np.pi <= lamb <= 3*np.pi/2):
-            self.beta = np.pi + np.arctan(np.cos(i_orbit)/np.tan(lamb))
-        else:
-            self.beta = -np.arctan(np.cos(i_orbit)/np.tan(lamb))
-
+            # Spherical cosine law to calculate beta
+            t1 = np.cos(th_nr_x)
+            t2 = np.sin(np.arccos(self.zetars))
+            t3 = t1/t2
+            t3[t3 > 1] = 1.0
+            t3[t3 < -1] = -1.0
+            t3[abs(t3) < 1e-6] = 0.0
+            self.betars = np.arccos(t3)
+            self.betars[abs(t2) <= 1e-9] = 0.0 
+            
+            # If normal vector of ring is downward still rotate counter clock-wise
+            if nrs_obs[1] < 0:
+                self.betars *= -1
+                self.betars += np.pi
+               
+        verbose(VERB_DEEP, "Phase angle: ", np.arccos(self.alphaps)*180/np.pi, "Theta0 ring: ", np.arccos(self.etars[0])*180/np.pi,
+              "Theta ring: ", np.arccos(self.zetars[0])*180/np.pi, "Phi ring: ", self.phidiffrs[0]*180/np.pi,
+              "Beta ring: ", self.betars[0]*180/np.pi)
+        
+    def rotation_matrix_z(self,angle):
+        """
+        Rotation matrix for a rotation around the z-axis in anti-clockwise direction
+        """
+        Rm = np.array([[np.cos(angle), np.sin(angle),0],[-np.sin(angle),np.cos(angle),0],[0,0,1]])
+        return Rm
+    
     def _updateLambertianAlbedos(self):
         """
         Update lambertian albedos of facets.
@@ -2711,7 +2865,9 @@ class RingedPlanet(object):
         cond=(self.ar)*(self.ir)
         self.Rir[cond]=self.fluxirs[cond]*self.ALrs[cond]*self.zetars[cond]
     
-    def updateReflection(self,taur=0.4):
+    def updateReflection(self,
+                         taur=0.4,
+                         normalize=True):
         """
         Update:
             - updateOpticalFactors
@@ -2721,7 +2877,6 @@ class RingedPlanet(object):
         planet_used = False
         ring_used = False
         self.taur = taur
-        beta = self.beta
         
         #Reset results
         self.Ptot = 0
@@ -2729,12 +2884,14 @@ class RingedPlanet(object):
         
         # Planet results
         self.Rip=np.zeros(self.Np)
+        self.Pip=np.zeros(self.Np)
         self.Stokesp=np.zeros((self.Np,self.nmatp+1))
         self.Ptotp = 0 
         self.Stotp = np.zeros(self.nmatp)
         
         # Ring results
         self.Rir=np.zeros(self.Nrt)
+        self.Pir=np.zeros(self.Nrt)
         self.Stokesr=np.zeros((self.Nrt,self.nmatr+1))
         self.Ptotr = 0 
         self.Stotr = np.zeros(self.nmatr)
@@ -2748,11 +2905,13 @@ class RingedPlanet(object):
         # Facets that are visible but the line of sight is blocked by the rings
         condspo = (self.apso)*(self.ip)
         
-        cond = condo + condspr + condspo
+        # Facets that are both of the above
+        condspb = self.apsb
+        
+        cond = condo + condspr + condspo + condspb
         
         if cond.sum() > 0:
             planet_used = True
-            
             if self.physics["extension"] == "pixx":
                 self.Stokesp[cond,:] = pixx.reflection(cond.sum(), self.phidiffps[cond], self.betaps[cond],
                                                         abs(self.etaps[cond]), abs(self.zetaps[cond]),
@@ -2783,6 +2942,11 @@ class RingedPlanet(object):
             icheck = abs(np.arccos(self.etars[0])*180/np.pi - 90.0) > angle_eps # illuminated
             vsum = condspo.sum()
             isum = condspr.sum()
+            bsum = condspb.sum()
+            if vcheck and icheck and (bsum > 0):
+                self.Stokesp[condspb,:-1] *= np.exp(-self.taur/abs(self.etars[0]))
+                self.Stokesp[condspb,:-1] *= np.exp(-self.taur/abs(self.zetars[0]))
+                
             if vcheck and icheck and (vsum > 0) and (isum > 0):
                 self.Stokesp[condspr,:-1] *= np.exp(-self.taur/abs(self.etars[0]))
                 self.Stokesp[condspo,:-1] *= np.exp(-self.taur/abs(self.zetars[0]))
@@ -2792,40 +2956,31 @@ class RingedPlanet(object):
                 self.Stokesp[condspr,:-1] *= np.exp(-self.taur/abs(self.etars[0]))
                   
             Sp = self.Stokesp[:,:-1]
-            Pp = self.Stokesp[:,-1]
+            self.Pip[cond] = self.Stokesp[cond,-1]
             
-            # To normalize: /np.pi*(self.Rp**2)) # For ppm: /(4*np.pi*self.rstar**2)*1e6
-            self.Rip[cond] = Sp[cond,0]/(np.pi*self.Rp**2)
-            Stotp = np.sum(Sp,axis=0)/(np.pi*self.Rp**2) 
-            
-            # Rotate stokes vector to detector plane. 
-            Stotp1 = np.cos(2*beta)*Stotp[1] + np.sin(2*beta)*Stotp[2]
-            Stotp2 = -np.sin(2*beta)*Stotp[1] + np.cos(2*beta)*Stotp[2]
-            Stotp[1] = Stotp1
-            Stotp[2] = Stotp2
+            if normalize:
+                self.Rip[cond] = Sp[cond,0]/(np.pi*self.Rp**2)
+            else:
+                self.Rip[cond] = Sp[cond,0]/(4*np.pi*self.rstar**2)*1e6        
+            Stotp = np.sum(Sp,axis=0)/(np.pi*self.Rp**2)
             
             # Calculate degree of polarization
-            if abs(Stotp[0]) < 1e-12:
+            if abs(Stotp[0]) < 1e-6:
                 Ptotp = 0.0
-            elif abs(Stotp[2]) < 1e-12:
+            elif abs(Stotp[2]) < 1e-6:
                 Ptotp = -Stotp[1]/Stotp[0]
             else:
                 Ptotp = np.sqrt(Stotp[1]**2 + Stotp[2]**2)/Stotp[0]
-                
-            self.Stotp = Stotp
-            self.Ptotp = Ptotp
-
-            verbose(VERB_DEEP,"Ftot planet: ", Stotp[0], ",  Ptot planet: ", Ptotp)
         
         #Ring conditions
         cond=(self.ar)*(self.ir)
 
         # Check if the back or front of the ring is visible
         back = False 
-        if np.inner(self.nstar_equ,self.nr_equ) < 0:
+        if (np.inner(self.nstar_equ,self.nr_equ) < 0) ^ (np.inner(self.nobs_equ,self.nr_equ) < 0):
             back = True
             cond = (self.fr)
-            verbose(VERB_DEEP,"Back: ", back) 
+            verbose(VERB_DEEP,"Back visible: ", back) 
        
         if cond.sum() > 0:
             ring_used = True
@@ -2880,52 +3035,77 @@ class RingedPlanet(object):
                                                                      np.ones(cond.sum())*self.normr*self.afr,
                                                                      qreflection=1
                                                                     )
-
             Sr = self.Stokesr[:,:-1]
-            Pr = self.Stokesr[:,-1]
+            self.Pir[cond] = self.Stokesr[cond,-1]
             
             # To normalize: /np.pi*(self.Rp**2)) # For ppm: /(4*np.pi*self.rstar**2)*1e6
-            self.Rir[cond] = Sr[cond,0]/(np.pi*(self.Rp**2)) 
+            if normalize:
+                self.Rir[cond] = Sr[cond,0]/(np.pi*(self.Rp**2)) 
+            else:
+                self.Rir[cond] = Sr[cond,0]/(4*np.pi*self.rstar**2)*1e6 
             Stotr = np.sum(Sr,axis=0)/(np.pi*(self.Rp**2)) 
-            
-            # Rotate stokes vector to detector plane. 
-            Stotr1 = np.cos(2*beta)*Stotr[1] + np.sin(2*beta)*Stotr[2]
-            Stotr2 = -np.sin(2*beta)*Stotr[1] + np.cos(2*beta)*Stotr[2]
-            Stotr[1] = Stotr1
-            Stotr[2] = Stotr2
-            
+
             # Calculate degree of polarization
-            if abs(Stotr[0]) < 1e-12:
+            if abs(Stotr[0]) < 1e-6:
                 Ptotr = 0.0
-            elif abs(Stotr[2]) < 1e-12:
+            elif abs(Stotr[2]) < 1e-6:
                 Ptotr = -Stotr[1]/Stotr[0]
             else:
                 Ptotr = np.sqrt(Stotr[1]**2 + Stotr[2]**2)/Stotr[0]
-           
-            self.Stotr = Stotr 
-            self.Ptotr = Ptotr
-
-            verbose(VERB_DEEP,"Ftot ring: ", Stotr[0], ",  Ptot ring: ", Ptotr)
         
         # Calculate total flux and total degree of polarization
+        # Only now the Stot is converted to ppm to guarentee consistency 
+        # in Ptot between normalized and ppm results
         if ring_used and planet_used:
             Stot = Stotr+Stotp
+            if not normalize:
+                Stotp *= self.Rp**2/(4*self.rstar**2)*1e6
+                Stotr *= self.Rp**2/(4*self.rstar**2)*1e6              
+            self.Stotp = Stotp
+            self.Ptotp = Ptotp
+            self.Stotr = Stotr 
+            self.Ptotr = Ptotr
+            verbose(VERB_DEEP,"Ftot planet: ", Stotp[0], ",  Ptot planet: ", Ptotp)
+            verbose(VERB_DEEP,"Ftot ring: ", Stotr[0], ",  Ptot ring: ", Ptotr)
         elif ring_used:
             Stot = Stotr
+            if not normalize:
+                Stotr *= self.Rp**2/(4*self.rstar**2)*1e6
+            self.Stotr = Stotr 
+            self.Ptotr = Ptotr
+            verbose(VERB_DEEP,"Ftot ring: ", Stotr[0], ",  Ptot ring: ", Ptotr)
         elif planet_used:
             Stot = Stotp
+            if not normalize:
+                Stotp *= self.Rp**2/(4*self.rstar**2)*1e6
+            self.Stotp = Stotp
+            self.Ptotp = Ptotp
+            verbose(VERB_DEEP,"Ftot planet: ", Stotp[0], ",  Ptot planet: ", Ptotp)
         else:
             Stot = np.zeros(4)
         
-        if abs(Stot[0]) < 1e-12:
+        if abs(Stot[0]) < 1e-6:
             Ptot = 0.0
-        elif abs(Stot[2]) < 1e-12:
+        elif abs(Stot[2]) < 1e-6:
             Ptot = -Stot[1]/Stot[0]
         else:
             Ptot = np.sqrt(Stot[1]**2 + Stot[2]**2)/Stot[0]
+            
+        if not normalize:
+            Stot *= self.Rp**2/(4*self.rstar**2)*1e6
+            
         self.Stot = Stot
         self.Ptot = Ptot
         
+        verbose(VERB_DEEP,"Ftot: ", self.Stot[0], "Ptot: ", self.Ptot)
+        
+    def lambertian_test(self,alpha):
+        """
+        Simple, analytical model for the normalized reflected light coming of a lambertian planet
+        """
+        F = 2*(np.sin(alpha)+(np.pi-alpha)*np.cos(alpha))/3
+        return F/np.pi
+    
     def _save_reflection_values(self):
         f=open("/tmp/reflection-test.pkl","wb")
         pickle.dump(self.save_values,f)

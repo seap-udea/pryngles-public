@@ -48,29 +48,6 @@ cpixx_ext.reflection.argtypes = [
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# Class FourierCoefficients
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-class FourierCoefficients(ctypes.Structure):
-    """Fourier coefficients ctypes structure
-    """
-    _fields_=[
-        ("nmat",ctypes.c_int),
-        ("nmugs",ctypes.c_int),
-        ("nfou",ctypes.c_int),
-        ("xmu",PDOUBLE),
-        ("rfou",PPPDOUBLE),
-        ("rtra",PPPDOUBLE),
-    ]
-    def __init__(self,nmat,nmugs,nfou,xmu,rfou,rtra):
-        self.nmat=nmat
-        self.nmugs=nmugs
-        self.nfou=nfou
-        self.xmu=ExtensionUtil.vec2ptr(xmu)
-        self.rfou=ExtensionUtil.cub2ptr(rfou)
-        self.rtra=ExtensionUtil.cub2ptr(rtra)
-
-
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Class ExtensionUtil
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 class ExtensionUtil(object):
@@ -181,6 +158,29 @@ class ExtensionUtil(object):
 
         return arr
 
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Class FourierCoefficients
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+class FourierCoefficients(ctypes.Structure):
+    """Fourier coefficients ctypes structure
+    """
+    _fields_=[
+        ("nmat",ctypes.c_int),
+        ("nmugs",ctypes.c_int),
+        ("nfou",ctypes.c_int),
+        ("xmu",PDOUBLE),
+        ("rfou",PPPDOUBLE),
+        ("rtra",PPPDOUBLE),
+    ]
+    def __init__(self,nmat,nmugs,nfou,xmu,rfou,rtra):
+        self.nmat=nmat
+        self.nmugs=nmugs
+        self.nfou=nfou
+        self.xmu=ExtensionUtil.vec2ptr(xmu)
+        self.rfou=ExtensionUtil.cub2ptr(rfou)
+        self.rtra=ExtensionUtil.cub2ptr(rtra)
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

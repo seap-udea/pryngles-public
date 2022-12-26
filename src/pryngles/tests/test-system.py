@@ -329,31 +329,11 @@ class Test(unittest.TestCase):
 	    global sys,RP
 	
 	    Verbose.VERBOSITY=VERB_NONE
-	    """
-	    sys=System()
-	    S=sys.add(kind="Star",
-	              physics=dict(radius=Consts.rsun/sys.ul),
-	              optics=dict(limb_coeffs=[0.65])
-	             )
-	    P=sys.add(kind="Planet",primary=S,
-	              orbit=dict(a=0.2,e=0.0),
-	              physics=dict(radius=Consts.rsaturn/sys.ul)
-	             )
-	    R=sys.add(kind="Ring",primary=P,
-	              physics=dict(fi=1.5,fe=2.5,i=30*Consts.deg)
-	             )
-	    #""";
-	    
-	    #"""
 	    sys=System()
 	    S=sys.add(kind="Star",radius=Consts.rsun/sys.ul,limb_coeffs=[0.65])
 	    P=sys.add(kind="Planet",parent=S,a=0.2,e=0.0,radius=Consts.rsaturn/sys.ul)
 	    R=sys.add(kind="Ring",parent=P,fi=1.5,fe=2.5,i=30*Consts.deg)
 	    RP=sys.ensamble_system(lamb=90*Consts.deg,beta=90*Consts.deg)
-	    O=sys.add(kind="Observer",optics=dict(lamb=90*Consts.deg,beta=90*Consts.deg))
-	    #""";
-	    
-	    RP=sys.ensamble_system()
 	    ecliptic,observer,star=RP.plotRingedPlanet(showfig=1)
 	    
 	    RP.changeObserver([90*Consts.deg,30*Consts.deg])

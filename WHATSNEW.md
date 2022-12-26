@@ -9,6 +9,8 @@ list of the features introduced in each version family of the package.
 
 - **0.9.x versions**:
 
+  - Correction on beta angles.
+  - New default file with Fourier coefficients for planet.
   - Major upgrade in the optical model of the legacy module.
   - Reflection is now calculated using cpixx extension.
   - Method `updateReflection` introduced to calculate the flux
